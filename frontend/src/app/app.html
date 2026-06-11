@@ -1,0 +1,22 @@
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand" routerLink="/">
+      <span class="brand-mark">S</span>
+      <span>StockAnalyzer</span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Home</a>
+      <a routerLink="/search" routerLinkActive="active">Stock Search</a>
+      <a routerLink="/history" routerLinkActive="active">Prediction History</a>
+      <a routerLink="/accuracy" routerLinkActive="active">Model Accuracy</a>
+    </nav>
+    <p class="sidebar-note">Educational analysis only. Not financial advice.</p>
+  </aside>
+  <div class="workspace">
+    <header>
+      <span class="status-dot"></span>
+      <span>Services connected</span>
+    </header>
+    <router-outlet />
+  </div>
+</div>

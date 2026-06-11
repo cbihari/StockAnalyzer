@@ -1,0 +1,26 @@
+.DS_Store
+.env
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.angular/
+**/.venv/
+**/__pycache__/
+*.pyc
+.idea/
+.vscode/
+**/.pytest_cache/
+**/TestResults/
+coverage/
+*.coverage
+*.log
+
+# Generated ML artifacts
+ml-service/data/processed/*
+!ml-service/data/processed/.gitkeep
+ml-service/models/*
+!ml-service/models/.gitkeep
+!ml-service/models/registry/
+ml-service/models/registry/*
+!ml-service/models/registry/.gitkeep
