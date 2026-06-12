@@ -1,8 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { WatchlistService } from './watchlist.service';
+import { StockApiService } from './stock-api.service';
+import { of } from 'rxjs';
 
 describe('WatchlistService', () => {
-  beforeEach(() => { localStorage.clear(); TestBed.resetTestingModule(); });
+  beforeEach(() => {
+    localStorage.clear(); TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [{ provide: StockApiService, useValue: { getWorkspaceWatchlist: () => of([]), saveWorkspaceWatchlist: (items: unknown) => of(items) } }] });
+  });
 
   it('migrates the legacy ticker list into structured items', () => {
     localStorage.setItem('stock-analyzer-watchlist-v1', JSON.stringify(['aapl']));

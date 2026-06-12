@@ -19,6 +19,8 @@ from app.stock_search import router as stock_search_router
 from app.stock_quotes import router as stock_quotes_router
 from app.market_data_provider import MARKET_DATA_PROVIDER
 from app.market_overview import router as market_overview_router
+from app.news_sentiment import router as news_sentiment_router
+from app.ai.router import router as ai_router
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO").upper(),
@@ -34,6 +36,8 @@ app.include_router(rule_based_prediction_router)
 app.include_router(ml_prediction_router)
 app.include_router(models_router)
 app.include_router(market_overview_router)
+app.include_router(news_sentiment_router)
+app.include_router(ai_router)
 logger = logging.getLogger(__name__)
 
 

@@ -1,4 +1,5 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { StockApiService } from './stock-api.service';
 import { normalizeTicker } from './ticker-validation';
 
 const STORAGE_KEY = 'stock-analyzer-watchlist-v2';
@@ -14,8 +15,12 @@ export interface WatchlistItem {
 
 @Injectable({ providedIn: 'root' })
 export class WatchlistService {
+  private readonly api = inject(StockApiService);
   readonly items = signal<WatchlistItem[]>(this.load());
   readonly tickers = computed(() => this.items().map((item) => item.ticker));
+  readonly syncState = signal<'local' | 'syncing' | 'synced' | 'offline'>('local');
+
+  constructor() { this.hydrate(); }
 
   has(ticker: string): boolean { return this.tickers().includes(normalizeTicker(ticker)); }
   get(ticker: string): WatchlistItem | undefined { return this.items().find((item) => item.ticker === normalizeTicker(ticker)); }
@@ -49,6 +54,7 @@ export class WatchlistService {
   private set(items: WatchlistItem[]): void {
     this.items.set(items);
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch { /* Storage can be unavailable in private contexts. */ }
+    this.sync(items);
   }
 
   private load(): WatchlistItem[] {
@@ -80,5 +86,29 @@ export class WatchlistService {
 
   private persistMigration(items: WatchlistItem[]): void {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch { /* Migration remains in memory. */ }
+  }
+
+  private hydrate(): void {
+    this.syncState.set('syncing');
+    this.api.getWorkspaceWatchlist().subscribe({
+      next: (remote) => {
+        if (remote.length) {
+          this.items.set(remote);
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(remote)); } catch { /* Local cache is optional. */ }
+          this.syncState.set('synced');
+        } else {
+          this.sync(this.items());
+        }
+      },
+      error: () => this.syncState.set('offline'),
+    });
+  }
+
+  private sync(items: WatchlistItem[]): void {
+    this.syncState.set('syncing');
+    this.api.saveWorkspaceWatchlist(items).subscribe({
+      next: () => this.syncState.set('synced'),
+      error: () => this.syncState.set('offline'),
+    });
   }
 }

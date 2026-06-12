@@ -16,6 +16,10 @@ class MarketDataProvider(ABC):
     def search(self, query: str, limit: int) -> list[dict[str, object]]:
         raise NotImplementedError
 
+    @abstractmethod
+    def news(self, ticker: str, limit: int) -> list[dict[str, object]]:
+        raise NotImplementedError
+
 
 class YahooFinanceProvider(MarketDataProvider):
     name = "yahoo_finance"
@@ -41,6 +45,9 @@ class YahooFinanceProvider(MarketDataProvider):
             include_cultural_assets=False,
             timeout=5,
         ).quotes
+
+    def news(self, ticker: str, limit: int) -> list[dict[str, object]]:
+        return yf.Ticker(ticker).get_news(count=limit, tab="news")
 
 
 def get_market_data_provider() -> MarketDataProvider:

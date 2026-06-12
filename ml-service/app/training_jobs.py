@@ -40,7 +40,9 @@ class TrainingJobManager:
         trainer: Callable = train_model_for_ticker,
         max_workers: int | None = None,
     ) -> None:
-        self.jobs_dir = project_root.resolve() / "models" / "jobs"
+        configured_dir = os.getenv("MODEL_DIR", "").strip()
+        models_dir = Path(configured_dir).resolve() if configured_dir else project_root.resolve() / "models"
+        self.jobs_dir = models_dir / "jobs"
         self.trainer = trainer
         self._lock = threading.Lock()
         self._jobs: dict[str, TrainingJob] = {}

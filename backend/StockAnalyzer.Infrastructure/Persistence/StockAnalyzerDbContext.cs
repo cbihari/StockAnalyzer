@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using StockAnalyzer.Domain.Stocks;
+using StockAnalyzer.Domain.Workspace;
 
 namespace StockAnalyzer.Infrastructure.Persistence;
 
@@ -10,6 +11,8 @@ public sealed class StockAnalyzerDbContext(DbContextOptions<StockAnalyzerDbConte
     public DbSet<StockPrice> StockPrices => Set<StockPrice>();
     public DbSet<Prediction> Predictions => Set<Prediction>();
     public DbSet<ModelMetric> ModelMetrics => Set<ModelMetric>();
+    public DbSet<GuestWorkspace> GuestWorkspaces => Set<GuestWorkspace>();
+    public DbSet<AiExplanation> AiExplanations => Set<AiExplanation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

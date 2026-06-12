@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
 using StockAnalyzer.Application.Abstractions;
 using StockAnalyzer.Application.DTOs;
@@ -15,6 +16,28 @@ public sealed class MlServiceClient(HttpClient httpClient, IConfiguration config
         ["existing_model", "newly_trained_model", "rule_based_fallback"];
     private readonly TimeSpan predictionTimeout = TimeSpan.FromSeconds(
         Math.Max(configuration.GetValue("MlServicePredictionTimeoutSeconds", 600), 30));
+    private readonly TimeSpan aiTimeout = TimeSpan.FromSeconds(
+        Math.Max(configuration.GetValue("MlServiceAiTimeoutSeconds", 45), 5));
+
+    public Task<MlAiResearchResponseDto> AskAiResearchAsync(
+        string ticker,
+        string question,
+        CancellationToken cancellationToken) =>
+        PostJsonAsync<AiResearchRequest, MlAiResearchResponseDto>(
+            "/ai/research",
+            new AiResearchRequest(ticker, question),
+            cancellationToken,
+            aiTimeout);
+
+    public Task<MlAiExplanationDto> GenerateAiExplanationAsync(
+        string ticker,
+        bool forceRefresh,
+        CancellationToken cancellationToken) =>
+        PostJsonAsync<AiExplainRequest, MlAiExplanationDto>(
+            "/ai/explain",
+            new AiExplainRequest(ticker, forceRefresh),
+            cancellationToken,
+            aiTimeout);
 
     public Task<MarketOverviewDto> GetMarketOverviewAsync(
         string region,
@@ -28,6 +51,15 @@ public sealed class MlServiceClient(HttpClient httpClient, IConfiguration config
         CancellationToken cancellationToken) =>
         GetAsync<StockQuotesDto>(
             $"/stocks/quotes?tickers={Encode(string.Join(',', tickers))}",
+            cancellationToken);
+
+    public Task<StockNewsDto> GetStockNewsAsync(
+        string ticker,
+        int lookbackDays,
+        int limit,
+        CancellationToken cancellationToken) =>
+        GetAsync<StockNewsDto>(
+            $"/stocks/news?ticker={Encode(ticker)}&lookback_days={lookbackDays}&limit={limit}",
             cancellationToken);
 
     public Task<IReadOnlyList<StockSuggestionDto>> SearchStocksAsync(
@@ -186,6 +218,39 @@ public sealed class MlServiceClient(HttpClient httpClient, IConfiguration config
         }
     }
 
+    private async Task<TResponse> PostJsonAsync<TRequest, TResponse>(
+        string path,
+        TRequest body,
+        CancellationToken cancellationToken,
+        TimeSpan timeout)
+    {
+        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutSource.CancelAfter(timeout);
+        try
+        {
+            using var response = await httpClient.PostAsJsonAsync(path, body, JsonOptions, timeoutSource.Token);
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = await ReadErrorDetailAsync(response, timeoutSource.Token);
+                throw new ExternalServiceException(detail, MapStatusCode(response.StatusCode));
+            }
+            return await response.Content.ReadFromJsonAsync<TResponse>(JsonOptions, timeoutSource.Token)
+                ?? throw new ExternalServiceException("The ML service returned an empty response.", 502);
+        }
+        catch (HttpRequestException exception)
+        {
+            throw new ExternalServiceException("The ML service is unavailable.", 503, exception);
+        }
+        catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new ExternalServiceException("The AI explanation request timed out.", 504, exception);
+        }
+        catch (JsonException exception)
+        {
+            throw new ExternalServiceException("The ML service returned an invalid response.", 502, exception);
+        }
+    }
+
     private static async Task<string> ReadErrorDetailAsync(
         HttpResponseMessage response,
         CancellationToken cancellationToken)
@@ -212,4 +277,8 @@ public sealed class MlServiceClient(HttpClient httpClient, IConfiguration config
     private static string Encode(string value) => Uri.EscapeDataString(value);
 
     private sealed record MlError(string? Detail);
+    private sealed record AiExplainRequest(
+        string Ticker,
+        [property: JsonPropertyName("force_refresh")] bool ForceRefresh);
+    private sealed record AiResearchRequest(string Ticker, string Question);
 }

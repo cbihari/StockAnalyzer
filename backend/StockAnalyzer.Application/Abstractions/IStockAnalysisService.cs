@@ -12,6 +12,12 @@ public interface IStockAnalysisService
         IReadOnlyList<string> tickers,
         CancellationToken cancellationToken);
 
+    Task<StockNewsDto> GetStockNewsAsync(
+        string ticker,
+        int lookbackDays,
+        int limit,
+        CancellationToken cancellationToken);
+
     Task<IReadOnlyList<StockSuggestionDto>> SearchStocksAsync(
         string query,
         CancellationToken cancellationToken);

@@ -4,12 +4,28 @@ namespace StockAnalyzer.Application.Abstractions;
 
 public interface IMlServiceClient
 {
+    Task<MlAiResearchResponseDto> AskAiResearchAsync(
+        string ticker,
+        string question,
+        CancellationToken cancellationToken);
+
+    Task<MlAiExplanationDto> GenerateAiExplanationAsync(
+        string ticker,
+        bool forceRefresh,
+        CancellationToken cancellationToken);
+
     Task<MarketOverviewDto> GetMarketOverviewAsync(
         string region,
         CancellationToken cancellationToken);
 
     Task<StockQuotesDto> GetStockQuotesAsync(
         IReadOnlyList<string> tickers,
+        CancellationToken cancellationToken);
+
+    Task<StockNewsDto> GetStockNewsAsync(
+        string ticker,
+        int lookbackDays,
+        int limit,
         CancellationToken cancellationToken);
 
     Task<IReadOnlyList<StockSuggestionDto>> SearchStocksAsync(

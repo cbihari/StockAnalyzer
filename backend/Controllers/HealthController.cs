@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace StockAnalyzer.Api.Controllers;
 
 [ApiController]
+[Route("health")]
 [Route("api/health")]
 public sealed class HealthController : ControllerBase
 {

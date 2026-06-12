@@ -9,7 +9,8 @@ namespace StockAnalyzer.Api.Controllers;
 public sealed class PredictionsController(
     IStockAnalysisService stockAnalysisService,
     IPredictionEvaluationService predictionEvaluationService,
-    IPredictionExplanationService predictionExplanationService) : ControllerBase
+    IPredictionExplanationService predictionExplanationService,
+    IAiExplanationService aiExplanationService) : ControllerBase
 {
     /// <summary>Creates a deterministic rule-based UP or DOWN prediction.</summary>
     [HttpGet("rule-based/{ticker}")]
@@ -61,4 +62,15 @@ public sealed class PredictionsController(
         string ticker,
         CancellationToken cancellationToken) =>
         Ok(await predictionExplanationService.ExplainAsync(ticker, cancellationToken));
+
+    /// <summary>Generates a grounded AI research explanation with deterministic fallback.</summary>
+    [HttpPost("explain-ai/{ticker}")]
+    [ProducesResponseType<AiExplanationResponseDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status504GatewayTimeout)]
+    public async Task<ActionResult<AiExplanationResponseDto>> ExplainAi(
+        string ticker,
+        [FromQuery] bool forceRefresh = false,
+        CancellationToken cancellationToken = default) =>
+        Ok(await aiExplanationService.ExplainAsync(ticker, forceRefresh, cancellationToken));
 }

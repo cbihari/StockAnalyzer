@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import shutil
 from dataclasses import asdict, dataclass
@@ -61,7 +62,8 @@ class ModelVersionMetadata:
 class ModelRegistry:
     def __init__(self, project_root: Path) -> None:
         self.project_root = project_root.resolve()
-        self.models_dir = self.project_root / "models"
+        configured_dir = os.getenv("MODEL_DIR", "").strip()
+        self.models_dir = Path(configured_dir).resolve() if configured_dir else self.project_root / "models"
         self.registry_dir = self.models_dir / "registry"
         self.versions_dir = self.models_dir / "versions"
 

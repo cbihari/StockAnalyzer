@@ -32,6 +32,7 @@ Suggested additional captures:
 - Learning Center with RSI, MACD, EMA, SMA, volume, and risk foundations
 - Contextual indicator lessons, knowledge checks, glossary, and guest progress
 - Browser-local price and daily-move alerts with an in-app notification center
+- Anonymous PostgreSQL workspace sync for watchlists, alert rules, and notifications
 - First-time model training progress
 - Rule-Based Fallback badge and warning
 
@@ -41,6 +42,8 @@ Suggested additional captures:
 - Research-first stock brief with quote, directional estimate, visible risk, and supporting/conflicting evidence
 - Two-to-three stock comparison with normalized cross-currency performance
 - India and US market overview with major indices and transparent sampled movers/breadth
+- Source-linked stock news with deterministic sentiment, topic, impact, coverage, and catalyst context
+- Manual portfolio tracking with cost basis, delayed valuation, gain/loss, daily movement, allocation, and concentration flags
 - Debounced ticker and company autocomplete with keyboard navigation
 - Historical OHLCV data and Chart.js closing-price chart
 - SMA, EMA, RSI, MACD, Bollinger Bands, returns, and volume indicators
@@ -49,7 +52,9 @@ Suggested additional captures:
 - Automatic first-time training and manual **Retrain Model** workflow
 - Ticker-specific accuracy, precision, recall, confusion matrix, and row counts
 - Rule-based fallback for invalid, incomplete, or insufficient market data
-- Deterministic beginner explanation without paid LLM APIs
+- Optional grounded OpenAI research explanation with strict structured output
+- Ticker-scoped AI Research Assistant with timestamped evidence citations and safe suggested questions
+- Automatic deterministic explanation fallback when OpenAI is disabled or unavailable
 - Prediction outcome evaluation and accuracy tracking
 - PostgreSQL-backed prediction accountability history with filters, outcome review, and CSV export
 - PostgreSQL persistence through Entity Framework Core migrations
@@ -67,12 +72,19 @@ Suggested additional captures:
 | `postgres` | PostgreSQL 17 | `localhost:5433` |
 
 The browser calls the .NET API. The .NET API calls FastAPI and stores stocks,
-prices, predictions, outcomes, and model metrics in PostgreSQL.
+prices, predictions, outcomes, model metrics, and AI explanation metadata in PostgreSQL.
+Only FastAPI can call OpenAI; the API key is never passed to Angular or returned by .NET.
 
 Market data is accessed through a provider interface in the ML service. The
 default adapter uses Yahoo Finance, while the application and API contracts are
 kept provider-neutral so a licensed feed can replace it without rewriting the
 analysis, model, backend, or frontend layers.
+
+News uses the same provider boundary. The current implementation reads Yahoo
+Finance headlines, deduplicates them, and applies transparent deterministic
+keyword rules for sentiment, topic, and potential impact. It does not use an
+LLM. A licensed provider or source-grounded LLM summarizer can replace this
+adapter later while preserving the public API contract and UI.
 
 ## Quick Start
 
@@ -134,6 +146,14 @@ Compose reads values from `.env`. Never commit real credentials.
 | `ML_LOG_LEVEL` | `INFO` | FastAPI logging level |
 | `MARKET_DATA_PROVIDER` | `yahoo` | ML market-data adapter selection |
 | `MARKET_DATA_PROVIDER_NAME` | `yahoo_finance` | Provider label returned by the .NET research API |
+| `AI_EXPLANATIONS_ENABLED` | `true` | Enables optional generated explanations |
+| `LLM_PROVIDER` | `openai` | Selects the replaceable LLM provider |
+| `OPENAI_API_KEY` | empty | OpenAI API key, passed only to FastAPI |
+| `OPENAI_MODEL` | `gpt-5.5` | Configurable Responses API model |
+| `OPENAI_REASONING_EFFORT` | `low` | Reasoning effort for explanation generation |
+| `OPENAI_TIMEOUT_SECONDS` | `30` | OpenAI SDK timeout before deterministic fallback |
+| `AI_RATE_LIMIT_PER_MINUTE` | `10` | FastAPI explanation requests allowed per client/IP per minute |
+| `ML_AI_TIMEOUT_SECONDS` | `45` | .NET timeout for the FastAPI explanation request |
 
 ## API Documentation
 
@@ -154,6 +174,14 @@ curl "http://localhost:8080/api/stocks/market/overview?region=india"
 curl "http://localhost:8080/api/predictions/ml/RELIANCE.NS"
 curl "http://localhost:8080/api/predictions/history?ticker=AAPL&outcome=pending"
 curl "http://localhost:8080/api/predictions/explain/RELIANCE.NS"
+curl -X POST "http://localhost:8080/api/predictions/explain-ai/AAPL?forceRefresh=false"
+curl -X POST "http://localhost:8080/api/research/AAPL" \
+  -H "Content-Type: application/json" \
+  -d '{"question":"Why does the model lean in this direction, and what evidence conflicts with it?"}'
+curl -X POST \
+  "http://localhost:8000/ai/explain" \
+  -H "Content-Type: application/json" \
+  -d '{"ticker":"AAPL","force_refresh":false}'
 curl -X POST "http://localhost:8080/api/predictions/evaluate"
 curl "http://localhost:8080/api/model/accuracy"
 curl "http://localhost:8080/api/model/metrics/TCS.NS"
@@ -173,6 +201,51 @@ docker compose logs -f dotnet-backend python-ml-service
 API responses include `X-Correlation-ID`. .NET errors use RFC-style problem
 details, while unexpected FastAPI errors return a generic message and a
 correlation ID. Logs contain request method, path, status, duration, and ID.
+
+## Deployment
+
+Production targets:
+
+- Angular: Vercel
+- .NET API and FastAPI ML service: Render
+- PostgreSQL: Neon
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for Blueprint setup, required environment
+variables, Neon SSL configuration, health checks, and Vercel SPA routing.
+
+## AI Research And Assistant
+
+Create an API key in the [OpenAI platform](https://platform.openai.com/api-keys).
+For Docker Compose, store it in `.secrets/openai_api_key`; this ignored file is
+mounted only into FastAPI as a Docker secret. For a direct local FastAPI run,
+set `OPENAI_API_KEY` in the process environment. Then rebuild
+`python-ml-service`.
+The service uses the official Python SDK, the Responses API, and Pydantic
+Structured Outputs. It sends only StockAnalyzer's current prediction, prices,
+indicators, model metrics, support/resistance, and a bounded set of news titles.
+The `/assistant` workspace accepts a short ticker-scoped research question, but
+the model can answer only from that supplied snapshot. Questions, news titles,
+and provider content are treated as untrusted input and cannot override the
+research guardrails.
+
+Generated responses are cached for 15 minutes using the analysis hash, model,
+and prompt version. PostgreSQL records provider/model metadata, the structured
+JSON, expiry, fallback reason, and token usage when available. `forceRefresh=true`
+bypasses the cache. Rate limiting, the short grounded context, bounded headlines,
+and caching reduce repeated calls and cost.
+
+If generation is disabled, the key is missing, OpenAI times out, rate-limits,
+refuses, or returns invalid structured output, FastAPI returns the deterministic
+explanation or research answer automatically. The assistant also refuses to
+make buy, sell, or hold decisions and redirects those questions to the cited
+evidence. Internal exception details, prompts, authorization
+headers, and API keys are not logged or returned.
+
+See the official [Responses API guide](https://developers.openai.com/api/docs/guides/responses)
+and [Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs).
+
+> AI explanations may contain errors. Review the underlying data and indicators.
+> Educational purpose only. Not financial advice.
 
 ## Tests
 
@@ -273,16 +346,36 @@ hours, and in-app delivery. The notification center records both trigger time
 and delayed market-data timestamp and links back to the stock evidence.
 
 The current guest implementation evaluates alerts whenever this browser loads
-fresh watchlist quotes. It does not claim real-time monitoring. The alert rule
-and notification models are isolated so a scheduled backend worker and email
-or push providers can replace browser evaluation later.
+fresh watchlist quotes. It does not claim real-time monitoring. Watchlists,
+alert rules, and notifications sync to PostgreSQL through an anonymous
+`X-Client-ID` workspace while retaining an offline browser cache. The alert
+models remain isolated so a scheduled worker and email or push providers can
+replace browser evaluation later.
+
+## Portfolio Tracking
+
+Open **Portfolio** to enter holdings manually using a ticker, quantity, average
+cost, optional purchase date, and research note. Holdings sync to the anonymous
+PostgreSQL workspace and retain a browser cache for temporary API outages.
+
+The portfolio page shows delayed current value, unrealized gain/loss, daily
+movement, allocation, and concentration prompts. INR and USD holdings are kept
+in separate currency buckets because the application does not yet have a
+licensed FX source. It intentionally does not create a misleading combined
+total. Brokerage connections, trade execution, dividends, taxes, fees, and
+corporate-action accounting are outside the current scope.
 
 ## Limitations
 
 - Yahoo Finance is an unofficial external data dependency and can be delayed,
   incomplete, rate-limited, or unavailable.
-- The model uses a simple Random Forest baseline and technical-price features;
-  it does not use news, fundamentals, macroeconomic data, or market sentiment.
+- The prediction model uses a simple Random Forest baseline and technical-price
+  features. News sentiment is displayed as separate research context and is not
+  currently used as a model feature.
+- News scoring is a transparent keyword baseline. It may miss nuance, sarcasm,
+  or mixed events and must not be interpreted as predicted price direction.
+- Portfolio results depend on manually entered cost basis and delayed quotes.
+  They exclude FX conversion, dividends, taxes, fees, splits, and brokerage reconciliation.
 - Metrics use one chronological 80/20 split, not walk-forward validation.
 - A higher accuracy score does not imply profitability or account for fees,
   slippage, liquidity, taxes, or risk management.
@@ -292,7 +385,9 @@ or push providers can replace browser evaluation later.
 ## Database
 
 The .NET backend applies EF Core migrations on startup. The schema contains
-`Stocks`, `StockPrices`, `Predictions`, and `ModelMetrics`. PostgreSQL data is
+`Stocks`, `StockPrices`, `Predictions`, `ModelMetrics`, and `GuestWorkspaces`.
+Anonymous workspace records use validated JSONB documents for the pre-account
+watchlist, alert state, and manually entered portfolio. PostgreSQL data is
 stored in the named Docker volume `postgres_data`.
 
 ## Contributing

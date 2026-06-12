@@ -15,4 +15,4 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/publish .
 EXPOSE 8080
-ENTRYPOINT ["dotnet", "StockAnalyzer.Api.dll"]
+CMD ["sh", "-c", "dotnet StockAnalyzer.Api.dll --urls http://0.0.0.0:${PORT:-8080}"]

@@ -53,6 +53,22 @@ public sealed class StocksController(IStockAnalysisService stockAnalysisService)
         CancellationToken cancellationToken = default) =>
         Ok(await stockAnalysisService.GetAnalysisAsync(ticker, period, cancellationToken));
 
+    /// <summary>Returns recent source-linked news with deterministic sentiment, topic, and impact labels.</summary>
+    [HttpGet("{ticker}/news")]
+    [ProducesResponseType<StockNewsDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status502BadGateway)]
+    public async Task<ActionResult<StockNewsDto>> GetNews(
+        string ticker,
+        [FromQuery] int lookbackDays = 7,
+        [FromQuery] int limit = 10,
+        CancellationToken cancellationToken = default) =>
+        Ok(await stockAnalysisService.GetStockNewsAsync(
+            ticker,
+            lookbackDays,
+            limit,
+            cancellationToken));
+
     /// <summary>Searches supported stocks by ticker symbol or company name.</summary>
     [HttpGet("search")]
     [ProducesResponseType<IReadOnlyList<StockSuggestionDto>>(StatusCodes.Status200OK)]

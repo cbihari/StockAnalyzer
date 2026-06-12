@@ -11,6 +11,10 @@ public static class DependencyInjection
         services.AddScoped<IStockAnalysisService, StockAnalysisService>();
         services.AddScoped<IPredictionEvaluationService, PredictionEvaluationService>();
         services.AddScoped<IPredictionExplanationService, PredictionExplanationService>();
+        services.AddScoped<IGuestWorkspaceService, GuestWorkspaceService>();
+        services.AddScoped<IPortfolioService, PortfolioService>();
+        services.AddScoped<IAiExplanationService, AiExplanationService>();
+        services.AddScoped<IAiResearchService, AiResearchService>();
         return services;
     }
 }
