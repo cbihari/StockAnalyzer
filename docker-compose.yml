@@ -27,6 +27,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
       FrontendUrl: ${FRONTEND_URL:-http://localhost:4200}
       MlServiceUrl: http://python-ml-service:8000
+      MarketDataProviderName: ${MARKET_DATA_PROVIDER_NAME:-yahoo_finance}
       MlServicePredictionTimeoutSeconds: ${ML_PREDICTION_TIMEOUT_SECONDS:-600}
       ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
@@ -51,6 +52,8 @@ services:
       - "${ML_SERVICE_PORT:-8000}:8000"
     environment:
       LOG_LEVEL: ${ML_LOG_LEVEL:-INFO}
+      MARKET_DATA_PROVIDER: ${MARKET_DATA_PROVIDER:-yahoo}
+      TRAINING_WORKERS: ${TRAINING_WORKERS:-2}
     volumes:
       - ./ml-service/models:/app/models
       - ./ml-service/data/processed:/app/data/processed

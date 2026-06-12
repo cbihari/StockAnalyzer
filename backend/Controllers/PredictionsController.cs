@@ -38,6 +38,21 @@ public sealed class PredictionsController(
         CancellationToken cancellationToken) =>
         Ok(await predictionEvaluationService.EvaluateAsync(cancellationToken));
 
+    /// <summary>Returns the persisted prediction audit trail with optional ticker and outcome filters.</summary>
+    [HttpGet("history")]
+    [ProducesResponseType<PredictionHistoryDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PredictionHistoryDto>> GetHistory(
+        [FromQuery] string? ticker = null,
+        [FromQuery] string outcome = "all",
+        [FromQuery] int limit = 100,
+        CancellationToken cancellationToken = default) =>
+        Ok(await predictionEvaluationService.GetHistoryAsync(
+            ticker,
+            outcome,
+            limit,
+            cancellationToken));
+
     /// <summary>Explains an ML prediction using deterministic technical-indicator rules.</summary>
     [HttpGet("explain/{ticker}")]
     [ProducesResponseType<PredictionExplanationDto>(StatusCodes.Status200OK)]

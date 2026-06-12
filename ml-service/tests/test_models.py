@@ -111,3 +111,12 @@ def test_model_metrics_returns_requested_no_model_message(tmp_path, monkeypatch)
     assert error.value.detail == (
         "No trained model found for this ticker. Analyze or train this stock first."
     )
+
+
+def test_model_versions_returns_empty_registry(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(models, "MODEL_REGISTRY", ModelRegistry(tmp_path))
+
+    response = models.get_model_versions("msft")
+
+    assert response.ticker == "MSFT"
+    assert response.versions == []

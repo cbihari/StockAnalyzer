@@ -2,20 +2,25 @@
   <aside class="sidebar">
     <a class="brand" routerLink="/">
       <span class="brand-mark">S</span>
-      <span>StockAnalyzer</span>
+      <span><strong>Stock</strong>Analyzer</span>
     </a>
     <nav aria-label="Main navigation">
       <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Home</a>
-      <a routerLink="/search" routerLinkActive="active">Stock Search</a>
-      <a routerLink="/history" routerLinkActive="active">Prediction History</a>
-      <a routerLink="/accuracy" routerLinkActive="active">Model Accuracy</a>
+      <a routerLink="/search" routerLinkActive="active"><span>⌕</span> Research</a>
+      <a routerLink="/market" routerLinkActive="active"><span>▥</span> Market</a>
+      <a routerLink="/compare" routerLinkActive="active"><span>⇄</span> Compare</a>
+      <a routerLink="/watchlist" routerLinkActive="active"><span>☆</span> Watchlist</a>
+      <a routerLink="/learn" routerLinkActive="active"><span>◇</span> Learn</a>
+      <a routerLink="/history" routerLinkActive="active"><span>↗</span> History</a>
+      <a routerLink="/accuracy" routerLinkActive="active"><span>◎</span> Models</a>
     </nav>
     <p class="sidebar-note">Educational analysis only. Not financial advice.</p>
   </aside>
   <div class="workspace">
     <header>
       <span class="status-dot"></span>
-      <span>Services connected</span>
+      <span>Research systems online</span>
+      <a class="notification-link" routerLink="/notifications" aria-label="Open notifications">Alerts @if (alerts.unreadCount()) { <b>{{ alerts.unreadCount() }}</b> }</a>
     </header>
     <router-outlet />
   </div>

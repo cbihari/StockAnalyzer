@@ -1,0 +1,13 @@
+symbol,name,exchange,type,country
+RELIANCE.NS,Reliance Industries Ltd,NSE,Equity,India
+RELIANCE.BO,Reliance Industries Ltd,BSE,Equity,India
+RELCAPITAL.NS,Reliance Capital,NSE,Equity,India
+TCS.NS,Tata Consultancy Services,NSE,Equity,India
+INFY.NS,Infosys Ltd,NSE,Equity,India
+HDFCBANK.NS,HDFC Bank Ltd,NSE,Equity,India
+ICICIBANK.NS,ICICI Bank Ltd,NSE,Equity,India
+SBIN.NS,State Bank of India,NSE,Equity,India
+AAPL,Apple Inc,NASDAQ,Equity,USA
+MSFT,Microsoft Corporation,NASDAQ,Equity,USA
+TSLA,Tesla Inc,NASDAQ,Equity,USA
+NVDA,NVIDIA Corporation,NASDAQ,Equity,USA

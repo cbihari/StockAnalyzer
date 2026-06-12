@@ -7,3 +7,10 @@ public sealed record HistoricalPriceDto(
     double Low,
     double Close,
     long Volume);
+
+public sealed record StockSuggestionDto(
+    string Symbol,
+    string Name,
+    string Exchange,
+    string Type,
+    string Country);
