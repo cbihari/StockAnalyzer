@@ -15,6 +15,10 @@ from app.ml_prediction import router as ml_prediction_router
 from app.models import router as models_router
 from app.rule_based_prediction import router as rule_based_prediction_router
 from app.stock_history import router as stock_history_router
+from app.stock_search import router as stock_search_router
+from app.stock_quotes import router as stock_quotes_router
+from app.market_data_provider import MARKET_DATA_PROVIDER
+from app.market_overview import router as market_overview_router
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO").upper(),
@@ -23,10 +27,13 @@ logging.basicConfig(
 
 app = FastAPI(title="StockAnalyzer ML Service", version="0.1.0")
 app.include_router(stock_history_router)
+app.include_router(stock_search_router)
+app.include_router(stock_quotes_router)
 app.include_router(indicators_router)
 app.include_router(rule_based_prediction_router)
 app.include_router(ml_prediction_router)
 app.include_router(models_router)
+app.include_router(market_overview_router)
 logger = logging.getLogger(__name__)
 
 
@@ -87,6 +94,7 @@ def health() -> dict[str, str]:
         "status": "healthy",
         "service": "stock-analyzer-ml",
         "timestamp": datetime.now(UTC).isoformat(),
+        "market_data_provider": MARKET_DATA_PROVIDER.name,
     }
 
 

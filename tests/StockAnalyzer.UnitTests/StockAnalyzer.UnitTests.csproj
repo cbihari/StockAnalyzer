@@ -13,6 +13,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../../backend/StockAnalyzer.Application/StockAnalyzer.Application.csproj" />
     <ProjectReference Include="../../backend/StockAnalyzer.Domain/StockAnalyzer.Domain.csproj" />
   </ItemGroup>
 </Project>

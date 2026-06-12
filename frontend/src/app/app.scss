@@ -1,13 +1,19 @@
 :host { display: block; min-height: 100vh; }
-.app-shell { min-height: 100vh; display: grid; grid-template-columns: 240px 1fr; }
-.sidebar { position: sticky; top: 0; height: 100vh; padding: 28px 20px; border-right: 1px solid var(--border); background: #0b100d; display: flex; flex-direction: column; }
-.brand { display: flex; align-items: center; gap: 11px; color: var(--text); font-weight: 800; text-decoration: none; }
-.brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; background: var(--accent); color: #07110c; }
-nav { display: grid; gap: 6px; margin-top: 46px; }
-nav a { padding: 12px 14px; border-radius: 8px; color: var(--muted); font-size: .9rem; text-decoration: none; }
-nav a:hover, nav a.active { color: var(--text); background: #151d18; }
-.sidebar-note { margin-top: auto; color: #68736c; font-size: .72rem; line-height: 1.6; }
+.app-shell { min-height: 100vh; display: grid; grid-template-columns: 226px 1fr; }
+.sidebar { position: sticky; z-index: 40; top: 0; height: 100vh; padding: 27px 18px; border-right: 1px solid var(--border); background: rgba(7,10,9,.92); backdrop-filter: blur(24px); display: flex; flex-direction: column; }
+.brand { display: flex; align-items: center; gap: 11px; color: var(--text); font-family: Manrope, sans-serif; font-size: .98rem; text-decoration: none; }
+.brand > span:last-child { color: #aeb8b1; }
+.brand strong { color: var(--text); }
+.brand-mark { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 11px; background: linear-gradient(135deg, var(--accent), #a7f3d0); color: #04100a; font-weight: 900; box-shadow: 0 0 28px rgba(88,235,166,.2); }
+nav { display: grid; gap: 7px; margin-top: 48px; }
+nav a { display: flex; align-items: center; gap: 11px; padding: 12px 13px; border: 1px solid transparent; border-radius: 10px; color: var(--muted); font-size: .84rem; font-weight: 600; text-decoration: none; transition: .18s ease; }
+nav a span { width: 19px; color: #6c7971; font-size: 1rem; text-align: center; }
+nav a:hover, nav a.active { border-color: rgba(99,241,174,.12); color: var(--text); background: rgba(99,241,174,.07); }
+nav a.active span { color: var(--accent); }
+.sidebar-note { margin-top: auto; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: rgba(255,255,255,.018); color: #707b74; font-size: .68rem; line-height: 1.55; }
 .workspace { min-width: 0; }
-header { height: 58px; padding: 0 34px; border-bottom: 1px solid var(--border); display: flex; justify-content: flex-end; align-items: center; gap: 8px; color: var(--muted); font-size: .78rem; }
-.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px rgba(101, 212, 155, .6); }
-@media (max-width: 780px) { .app-shell { grid-template-columns: 1fr; } .sidebar { position: static; height: auto; padding: 18px; border-right: 0; border-bottom: 1px solid var(--border); } nav { grid-template-columns: repeat(2, 1fr); margin-top: 20px; } .sidebar-note, header { display: none; } }
+header { height: 58px; padding: 0 34px; border-bottom: 1px solid var(--border); display: flex; justify-content: flex-end; align-items: center; gap: 9px; color: var(--muted); font-size: .72rem; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px rgba(88,235,166,.65); }
+.notification-link { display: inline-flex; align-items: center; gap: 7px; margin-left: 13px; padding-left: 18px; border-left: 1px solid var(--border); color: #aab5ae; text-decoration: none; }
+.notification-link b { display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--danger); color: #190606; font-size: .63rem; }
+@media (max-width: 780px) { .app-shell { grid-template-columns: 1fr; } .sidebar { position: static; height: auto; padding: 16px; border-right: 0; border-bottom: 1px solid var(--border); } nav { grid-template-columns: repeat(3, 1fr); margin-top: 16px; } nav a { justify-content: center; padding: 10px 7px; } .sidebar-note, header { display: none; } }

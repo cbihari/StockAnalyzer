@@ -1,6 +1,7 @@
 import logging
 import threading
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 from sklearn.ensemble import RandomForestClassifier
@@ -72,11 +73,12 @@ def train_model_for_ticker(ticker: str, period: str = "5y") -> ModelTrainingOutc
     try:
         dataset_path = save_dataset(dataset, normalized_ticker, PROJECT_ROOT / "data" / "processed")
         model, result = train_random_forest(dataset)
-        model_path, _ = save_training_artifacts(
+        model_path, metrics_path = save_training_artifacts(
             model,
             result,
             MODEL_REGISTRY.get_model_path(normalized_ticker),
         )
+        trained_at = datetime.now(UTC)
         metadata = MODEL_REGISTRY.save_model_metadata(
             ticker=normalized_ticker,
             model_name=type(model).__name__,
@@ -86,6 +88,22 @@ def train_model_for_ticker(ticker: str, period: str = "5y") -> ModelTrainingOutc
             precision=result.precision,
             recall=result.recall,
             features=FEATURE_COLUMNS,
+            trained_at=trained_at,
+        )
+        MODEL_REGISTRY.save_model_version(
+            ticker=normalized_ticker,
+            model_name=type(model).__name__,
+            source_model_path=model_path,
+            source_metrics_path=metrics_path,
+            training_rows=result.train_rows,
+            test_rows=result.test_rows,
+            accuracy=result.accuracy,
+            precision=result.precision,
+            recall=result.recall,
+            features=FEATURE_COLUMNS,
+            confusion_matrix=result.confusion_matrix,
+            feature_importance=result.feature_importance,
+            trained_at=trained_at,
         )
     except Exception as exc:
         logger.exception("Model training failed ticker=%s", normalized_ticker)

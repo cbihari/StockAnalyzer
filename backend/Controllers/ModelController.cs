@@ -40,4 +40,36 @@ public sealed class ModelController(
         [FromQuery] string period = "5y",
         CancellationToken cancellationToken = default) =>
         Ok(await stockAnalysisService.TrainModelAsync(ticker, period, cancellationToken));
+
+    /// <summary>Queues model training and immediately returns a durable job identifier.</summary>
+    [HttpPost("train/{ticker}/jobs")]
+    [ProducesResponseType<ModelTrainingJobDto>(StatusCodes.Status202Accepted)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ModelTrainingJobDto>> StartTrainingJob(
+        string ticker,
+        [FromQuery] string period = "5y",
+        CancellationToken cancellationToken = default)
+    {
+        var job = await stockAnalysisService.StartTrainingJobAsync(ticker, period, cancellationToken);
+        return AcceptedAtAction(nameof(GetTrainingJob), new { jobId = job.JobId }, job);
+    }
+
+    /// <summary>Returns the current state and result of a background training job.</summary>
+    [HttpGet("train/jobs/{jobId}")]
+    [ProducesResponseType<ModelTrainingJobDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ModelTrainingJobDto>> GetTrainingJob(
+        string jobId,
+        CancellationToken cancellationToken) =>
+        Ok(await stockAnalysisService.GetTrainingJobAsync(jobId, cancellationToken));
+
+    /// <summary>Returns immutable training versions for a ticker, newest first.</summary>
+    [HttpGet("versions/{ticker}")]
+    [ProducesResponseType<ModelVersionsDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ModelVersionsDto>> GetVersions(
+        string ticker,
+        CancellationToken cancellationToken) =>
+        Ok(await stockAnalysisService.GetModelVersionsAsync(ticker, cancellationToken));
 }

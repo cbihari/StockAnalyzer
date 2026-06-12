@@ -4,9 +4,10 @@ from datetime import date
 from typing import Annotated
 
 import pandas as pd
-import yfinance as yf
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel
+
+from app.market_data_provider import MARKET_DATA_PROVIDER
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/stock", tags=["stock"])
@@ -47,13 +48,7 @@ def fetch_stock_history(ticker: str, period: str) -> tuple[str, str, pd.DataFram
     logger.info("Fetching stock history ticker=%s period=%s", normalized_ticker, normalized_period)
 
     try:
-        history = yf.Ticker(normalized_ticker).history(
-            period=normalized_period,
-            interval="1d",
-            auto_adjust=False,
-            actions=False,
-            raise_errors=True,
-        )
+        history = MARKET_DATA_PROVIDER.history(normalized_ticker, normalized_period)
     except Exception as exc:
         logger.exception(
             "Yahoo Finance request failed ticker=%s period=%s",

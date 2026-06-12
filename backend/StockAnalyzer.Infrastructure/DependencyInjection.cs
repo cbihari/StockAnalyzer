@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IStockPriceRepository, StockPriceRepository>();
         services.AddScoped<IPredictionRepository, PredictionRepository>();
         services.AddScoped<IModelMetricRepository, ModelMetricRepository>();
+        services.AddSingleton<IMarketDataProviderInfo, MarketDataProviderInfo>();
         services.AddHttpClient<IMlServiceClient, MlServiceClient>(client =>
         {
             client.BaseAddress = new Uri(

@@ -27,12 +27,21 @@ Add or replace screenshots under `docs/screenshots/` as the interface evolves.
 Suggested additional captures:
 
 - Model Accuracy page with ticker-specific metrics
+- Background model retraining with durable job status and immutable versions
+- Guest watchlist with batch delayed quotes, notes, tags, daily change, range, and sparklines
+- Learning Center with RSI, MACD, EMA, SMA, volume, and risk foundations
+- Contextual indicator lessons, knowledge checks, glossary, and guest progress
+- Browser-local price and daily-move alerts with an in-app notification center
 - First-time model training progress
 - Rule-Based Fallback badge and warning
 
 ## Features
 
 - Angular dashboard with loading, validation, retry, and error states
+- Research-first stock brief with quote, directional estimate, visible risk, and supporting/conflicting evidence
+- Two-to-three stock comparison with normalized cross-currency performance
+- India and US market overview with major indices and transparent sampled movers/breadth
+- Debounced ticker and company autocomplete with keyboard navigation
 - Historical OHLCV data and Chart.js closing-price chart
 - SMA, EMA, RSI, MACD, Bollinger Bands, returns, and volume indicators
 - Rule-based and Random Forest UP/DOWN predictions
@@ -42,6 +51,7 @@ Suggested additional captures:
 - Rule-based fallback for invalid, incomplete, or insufficient market data
 - Deterministic beginner explanation without paid LLM APIs
 - Prediction outcome evaluation and accuracy tracking
+- PostgreSQL-backed prediction accountability history with filters, outcome review, and CSV export
 - PostgreSQL persistence through Entity Framework Core migrations
 - Structured request logs with correlation IDs
 - Swagger/OpenAPI documentation for .NET and FastAPI
@@ -58,6 +68,11 @@ Suggested additional captures:
 
 The browser calls the .NET API. The .NET API calls FastAPI and stores stocks,
 prices, predictions, outcomes, and model metrics in PostgreSQL.
+
+Market data is accessed through a provider interface in the ML service. The
+default adapter uses Yahoo Finance, while the application and API contracts are
+kept provider-neutral so a licensed feed can replace it without rewriting the
+analysis, model, backend, or frontend layers.
 
 ## Quick Start
 
@@ -117,6 +132,8 @@ Compose reads values from `.env`. Never commit real credentials.
 | `ASPNETCORE_ENVIRONMENT` | `Development` | .NET environment |
 | `FRONTEND_URL` | `http://localhost:4200` | Allowed CORS origin |
 | `ML_LOG_LEVEL` | `INFO` | FastAPI logging level |
+| `MARKET_DATA_PROVIDER` | `yahoo` | ML market-data adapter selection |
+| `MARKET_DATA_PROVIDER_NAME` | `yahoo_finance` | Provider label returned by the .NET research API |
 
 ## API Documentation
 
@@ -130,7 +147,12 @@ Useful requests:
 ```bash
 curl "http://localhost:8080/api/stocks/history/RELIANCE.NS?period=1y"
 curl "http://localhost:8080/api/stocks/indicators/RELIANCE.NS?period=1y"
+curl "http://localhost:8080/api/stocks/search?query=rel"
+curl "http://localhost:8080/api/stocks/AAPL/analysis?period=1y"
+curl "http://localhost:8080/api/stocks/compare?tickers=AAPL,MSFT&period=1y"
+curl "http://localhost:8080/api/stocks/market/overview?region=india"
 curl "http://localhost:8080/api/predictions/ml/RELIANCE.NS"
+curl "http://localhost:8080/api/predictions/history?ticker=AAPL&outcome=pending"
 curl "http://localhost:8080/api/predictions/explain/RELIANCE.NS"
 curl -X POST "http://localhost:8080/api/predictions/evaluate"
 curl "http://localhost:8080/api/model/accuracy"
@@ -186,10 +208,22 @@ The easiest option is the **Retrain Model** button on the Stock Detail page.
 It trains with five years of data, stores the new metrics, and refreshes the
 prediction automatically.
 
+The Model Accuracy page also supports non-blocking retraining. It queues a
+background job, shows live status, and refreshes the active metrics when the
+job succeeds. Each successful run is retained under
+`ml-service/models/versions/{TICKER_KEY}/{VERSION_ID}/`; the current model path
+remains unchanged for prediction compatibility. Job records are persisted in
+`ml-service/models/jobs/`. Set `TRAINING_WORKERS` to control local concurrency.
+
 Through the .NET gateway:
 
 ```bash
 curl -X POST "http://localhost:8080/api/model/train/TCS.NS?period=5y"
+
+# Background workflow
+curl -X POST "http://localhost:8080/api/model/train/TCS.NS/jobs?period=5y"
+curl "http://localhost:8080/api/model/train/jobs/{job-id}"
+curl "http://localhost:8080/api/model/versions/TCS.NS"
 ```
 
 Directly from `ml-service/`:
@@ -209,6 +243,39 @@ ticker has no model. Training requires at least 250 historical rows and complete
 OHLCV data. Invalid tickers, insufficient data, missing OHLCV values, and model
 training failures return a clearly labeled rule-based fallback instead of
 breaking the prediction flow.
+
+## Watchlist
+
+Open any Stock Detail page and select **Add to watchlist**, then use the
+**Watchlist** navigation item for a compact daily snapshot. Guest watchlists
+are stored in the current browser and capped at ten tickers. Each item supports
+a 500-character research note and up to five normalized tags, with tag-based
+filtering on the watchlist page. Existing ticker-only browser lists migrate
+automatically to the structured item format. Quote retrieval is
+already a batch backend contract (`GET /api/stocks/quotes?tickers=AAPL,MSFT`),
+so browser storage can later be replaced by authenticated account persistence
+without coupling the UI to Yahoo Finance.
+
+## Learning Center
+
+Open **Learn** from the main navigation for six short foundational lessons,
+common mistakes, practical examples, one-question knowledge checks, and a
+research glossary. Lesson completion is stored in the current browser. Stock
+Detail indicator cards link directly to the relevant lesson, keeping education
+inside the research workflow. Learning content lives in a separate typed
+content module so it can later be supplied by a CMS without rebuilding the UI.
+
+## Alerts
+
+Watchlist items support price-above, price-below, and absolute daily-move
+alerts. Rules include once/daily frequency, a 6-hour to 3-day cooldown, quiet
+hours, and in-app delivery. The notification center records both trigger time
+and delayed market-data timestamp and links back to the stock evidence.
+
+The current guest implementation evaluates alerts whenever this browser loads
+fresh watchlist quotes. It does not claim real-time monitoring. The alert rule
+and notification models are isolated so a scheduled backend worker and email
+or push providers can replace browser evaluation later.
 
 ## Limitations
 

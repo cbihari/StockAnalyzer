@@ -16,6 +16,27 @@ public sealed class MlServiceClient(HttpClient httpClient, IConfiguration config
     private readonly TimeSpan predictionTimeout = TimeSpan.FromSeconds(
         Math.Max(configuration.GetValue("MlServicePredictionTimeoutSeconds", 600), 30));
 
+    public Task<MarketOverviewDto> GetMarketOverviewAsync(
+        string region,
+        CancellationToken cancellationToken) =>
+        GetAsync<MarketOverviewDto>(
+            $"/market/overview?region={Encode(region)}",
+            cancellationToken);
+
+    public Task<StockQuotesDto> GetStockQuotesAsync(
+        IReadOnlyList<string> tickers,
+        CancellationToken cancellationToken) =>
+        GetAsync<StockQuotesDto>(
+            $"/stocks/quotes?tickers={Encode(string.Join(',', tickers))}",
+            cancellationToken);
+
+    public Task<IReadOnlyList<StockSuggestionDto>> SearchStocksAsync(
+        string query,
+        CancellationToken cancellationToken) =>
+        GetAsync<IReadOnlyList<StockSuggestionDto>>(
+            $"/stocks/search?query={Encode(query)}",
+            cancellationToken);
+
     public Task<IReadOnlyList<HistoricalPriceDto>> GetHistoryAsync(
         string ticker,
         string period,
@@ -81,6 +102,29 @@ public sealed class MlServiceClient(HttpClient httpClient, IConfiguration config
         CancellationToken cancellationToken) =>
         GetAsync<TickerModelMetricsDto>(
             $"/models/metrics?ticker={Encode(ticker)}",
+            cancellationToken);
+
+    public Task<ModelTrainingJobDto> StartTrainingJobAsync(
+        string ticker,
+        string period,
+        CancellationToken cancellationToken) =>
+        SendAsync<ModelTrainingJobDto>(
+            HttpMethod.Post,
+            $"/models/train/jobs?ticker={Encode(ticker)}&period={Encode(period)}",
+            cancellationToken);
+
+    public Task<ModelTrainingJobDto> GetTrainingJobAsync(
+        string jobId,
+        CancellationToken cancellationToken) =>
+        GetAsync<ModelTrainingJobDto>(
+            $"/models/train/jobs/{Encode(jobId)}",
+            cancellationToken);
+
+    public Task<ModelVersionsDto> GetModelVersionsAsync(
+        string ticker,
+        CancellationToken cancellationToken) =>
+        GetAsync<ModelVersionsDto>(
+            $"/models/versions?ticker={Encode(ticker)}",
             cancellationToken);
 
     private async Task<T> GetAsync<T>(

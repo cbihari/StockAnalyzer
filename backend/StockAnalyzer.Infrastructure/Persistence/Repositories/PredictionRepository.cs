@@ -23,6 +23,33 @@ public sealed class PredictionRepository(StockAnalyzerDbContext dbContext) : IPr
     public Task SaveChangesAsync(CancellationToken cancellationToken) =>
         dbContext.SaveChangesAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Prediction>> GetHistoryAsync(
+        string? ticker,
+        string outcome,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        var query = dbContext.Predictions.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(ticker))
+        {
+            var normalizedTicker = ticker.Trim().ToUpperInvariant();
+            query = query.Where(prediction => prediction.Ticker == normalizedTicker);
+        }
+
+        query = outcome switch
+        {
+            "pending" => query.Where(prediction => prediction.IsCorrect == null),
+            "correct" => query.Where(prediction => prediction.IsCorrect == true),
+            "wrong" => query.Where(prediction => prediction.IsCorrect == false),
+            _ => query
+        };
+
+        return await query
+            .OrderByDescending(prediction => prediction.CreatedAt)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<PredictionAccuracyDto> GetAccuracyAsync(
         CancellationToken cancellationToken)
     {

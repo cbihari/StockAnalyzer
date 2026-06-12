@@ -10,6 +10,9 @@ FastAPI service for stock market data and the project's baseline prediction API.
 - `GET /predict/rule-based?ticker=RELIANCE.NS` - readable rule-based UP/DOWN signal
 - `GET /predict/ml?ticker=RELIANCE.NS` - Random Forest prediction using latest indicators
 - `POST /models/train?ticker=TCS.NS&period=5y` - train or retrain a ticker model
+- `POST /models/train/jobs?ticker=TCS.NS&period=5y` - queue background training
+- `GET /models/train/jobs/{job_id}` - inspect training status and metrics
+- `GET /models/versions?ticker=TCS.NS` - list immutable model versions
 - `POST /predict` - deterministic placeholder prediction
 - `GET /docs` - interactive OpenAPI documentation
 
@@ -96,6 +99,8 @@ The command prints accuracy, precision, recall, a confusion matrix in
 - `models/RELIANCE_NS_random_forest.pkl` - fitted `RandomForestClassifier`
 - `models/RELIANCE_NS_random_forest_metrics.json` - reproducible evaluation details
 - `models/registry/RELIANCE_NS_metadata.json` - searchable model registry metadata
+- `models/versions/RELIANCE_NS/{VERSION_ID}/` - immutable model and metric snapshots
+- `models/jobs/{JOB_ID}.json` - durable background job status
 
 The model registry centralizes ticker normalization, model existence checks,
 model paths, and metadata persistence. Both CLI and automatic training write a
