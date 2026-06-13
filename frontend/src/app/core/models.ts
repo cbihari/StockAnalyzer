@@ -196,6 +196,178 @@ export interface StockQuotesResponse {
   quotes: MarketInstrument[];
 }
 
+export interface NewsArticle {
+  id: string;
+  headline: string;
+  publisher: string;
+  published_at: string;
+  url: string;
+  sentiment: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE';
+  sentiment_score: number;
+  impact: 'HIGH' | 'MEDIUM' | 'LOW';
+  topic: string;
+  summary: string;
+  why_it_matters: string;
+}
+
+export interface StockNews {
+  ticker: string;
+  overall_sentiment: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE';
+  sentiment_score: number;
+  confidence: number;
+  coverage: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE';
+  article_count: number;
+  lookback_days: number;
+  highest_impact_topic: string | null;
+  positive_count: number;
+  neutral_count: number;
+  negative_count: number;
+  articles: NewsArticle[];
+  as_of: string;
+  data_source: string;
+  methodology: string;
+  warning: string;
+}
+
+export interface AiExplanationSignal {
+  signal: string;
+  explanation: string;
+  importance: 'low' | 'medium' | 'high';
+}
+
+export interface StockAiExplanation {
+  ticker: string;
+  prediction: 'UP' | 'DOWN';
+  confidence: number;
+  summary: string;
+  supporting_signals: AiExplanationSignal[];
+  conflicting_signals: AiExplanationSignal[];
+  risk_level: 'LOW' | 'MEDIUM' | 'HIGH';
+  risk_factors: string[];
+  what_could_change_the_view: string[];
+  beginner_explanation: string;
+  data_limitations: string[];
+  disclaimer: string;
+}
+
+export interface AiExplanationResponse {
+  ticker: string;
+  explanation: StockAiExplanation;
+  provider: 'openai' | 'deterministic';
+  model: string;
+  fallbackUsed: boolean;
+  fallbackReason: string | null;
+  generatedAt: string;
+  cached: boolean;
+}
+
+export interface AiResearchCitation {
+  source: 'prediction' | 'technical_indicators' | 'market_context' | 'news_sentiment' | 'model_performance';
+  label: string;
+  evidence: string;
+  observed_at: string;
+}
+
+export interface StockResearchAnswer {
+  ticker: string;
+  question: string;
+  answer: string;
+  key_points: string[];
+  citations: AiResearchCitation[];
+  limitations: string[];
+  follow_up_questions: string[];
+  disclaimer: string;
+}
+
+export interface AiResearchResponse {
+  ticker: string;
+  answer: StockResearchAnswer;
+  provider: 'openai' | 'deterministic';
+  model: string;
+  fallbackUsed: boolean;
+  fallbackReason: string | null;
+  generatedAt: string;
+  cached: boolean;
+}
+
+export interface WorkspaceWatchlistItem {
+  ticker: string;
+  addedAt: string;
+  note: string;
+  tags: string[];
+}
+
+export interface WorkspaceAlertRule {
+  id: string;
+  ticker: string;
+  type: 'price_above' | 'price_below' | 'daily_move';
+  threshold: number;
+  frequency: 'once' | 'daily';
+  cooldownHours: number;
+  quietStart: string;
+  quietEnd: string;
+  enabled: boolean;
+  createdAt: string;
+  lastTriggeredAt: string | null;
+}
+
+export interface WorkspaceNotification {
+  id: string;
+  alertId: string;
+  ticker: string;
+  title: string;
+  message: string;
+  triggeredAt: string;
+  dataTimestamp: string;
+  evidenceUrl: string;
+  read: boolean;
+}
+
+export interface WorkspaceAlertState {
+  rules: WorkspaceAlertRule[];
+  notifications: WorkspaceNotification[];
+}
+
+export interface PortfolioHolding {
+  id: string;
+  ticker: string;
+  quantity: number;
+  average_cost: number;
+  purchased_at: string | null;
+  note: string;
+}
+
+export interface PortfolioHoldingSummary extends PortfolioHolding {
+  currency: 'INR' | 'USD';
+  current_price: number;
+  cost_basis: number;
+  market_value: number;
+  unrealized_gain: number;
+  gain_percent: number;
+  day_change_value: number;
+  weight_percent: number;
+}
+
+export interface PortfolioCurrencyBucket {
+  currency: 'INR' | 'USD';
+  cost_basis: number;
+  market_value: number;
+  unrealized_gain: number;
+  gain_percent: number;
+  day_change_value: number;
+  holding_count: number;
+}
+
+export interface PortfolioSummary {
+  holdings: PortfolioHoldingSummary[];
+  buckets: PortfolioCurrencyBucket[];
+  risk_flags: string[];
+  missing_tickers: string[];
+  as_of: string;
+  data_source: string;
+  disclaimer: string;
+}
+
 export interface PredictionHistoryItem extends MlPrediction {
   createdAt: string;
 }

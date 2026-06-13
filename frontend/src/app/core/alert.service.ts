@@ -1,6 +1,7 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { MarketInstrument } from './models';
 import { normalizeTicker } from './ticker-validation';
+import { StockApiService } from './stock-api.service';
 
 const RULES_KEY = 'stock-analyzer-alert-rules-v1';
 const NOTIFICATIONS_KEY = 'stock-analyzer-notifications-v1';
@@ -45,9 +46,13 @@ export interface AlertDraft {
 
 @Injectable({ providedIn: 'root' })
 export class AlertService {
+  private readonly api = inject(StockApiService);
   readonly rules = signal<AlertRule[]>(this.load<AlertRule[]>(RULES_KEY, []));
   readonly notifications = signal<AlertNotification[]>(this.load<AlertNotification[]>(NOTIFICATIONS_KEY, []));
   readonly unreadCount = computed(() => this.notifications().filter((item) => !item.read).length);
+  readonly syncState = signal<'local' | 'syncing' | 'synced' | 'offline'>('local');
+
+  constructor() { this.hydrate(); }
 
   rulesFor(ticker: string): AlertRule[] {
     const normalized = normalizeTicker(ticker);
@@ -126,8 +131,26 @@ export class AlertService {
     };
   }
 
-  private setRules(rules: AlertRule[]): void { this.rules.set(rules); this.save(RULES_KEY, rules); }
-  private setNotifications(items: AlertNotification[]): void { this.notifications.set(items); this.save(NOTIFICATIONS_KEY, items); }
+  private setRules(rules: AlertRule[]): void { this.rules.set(rules); this.save(RULES_KEY, rules); this.sync(); }
+  private setNotifications(items: AlertNotification[]): void { this.notifications.set(items); this.save(NOTIFICATIONS_KEY, items); this.sync(); }
   private save(key: string, value: unknown): void { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Optional guest persistence. */ } }
   private load<T>(key: string, fallback: T): T { try { return JSON.parse(localStorage.getItem(key) ?? 'null') ?? fallback; } catch { return fallback; } }
+  private hydrate(): void {
+    this.syncState.set('syncing');
+    this.api.getWorkspaceAlerts().subscribe({
+      next: (remote) => {
+        if (remote.rules.length || remote.notifications.length) {
+          this.rules.set(remote.rules as AlertRule[]); this.notifications.set(remote.notifications as AlertNotification[]);
+          this.save(RULES_KEY, remote.rules); this.save(NOTIFICATIONS_KEY, remote.notifications); this.syncState.set('synced');
+        } else { this.sync(); }
+      },
+      error: () => this.syncState.set('offline'),
+    });
+  }
+  private sync(): void {
+    this.syncState.set('syncing');
+    this.api.saveWorkspaceAlerts({ rules: this.rules(), notifications: this.notifications() }).subscribe({
+      next: () => this.syncState.set('synced'), error: () => this.syncState.set('offline'),
+    });
+  }
 }

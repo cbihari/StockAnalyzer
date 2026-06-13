@@ -23,10 +23,14 @@ builder.Services.AddSwaggerGen(options =>
 });
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+var allowedOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")
+        ?? builder.Configuration["FrontendUrl"]
+        ?? "http://localhost:4200")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy => policy
-        .WithOrigins(builder.Configuration["FrontendUrl"] ?? "http://localhost:4200")
+        .WithOrigins(allowedOrigins)
         .AllowAnyHeader()
         .AllowAnyMethod());
 });

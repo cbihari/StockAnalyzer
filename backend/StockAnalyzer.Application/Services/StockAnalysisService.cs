@@ -40,6 +40,27 @@ public sealed class StockAnalysisService(
         return mlServiceClient.GetStockQuotesAsync(normalized, cancellationToken);
     }
 
+    public Task<StockNewsDto> GetStockNewsAsync(
+        string ticker,
+        int lookbackDays,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        if (lookbackDays is < 1 or > 30)
+        {
+            throw new ArgumentException("News lookback must be between 1 and 30 days.", nameof(lookbackDays));
+        }
+        if (limit is < 1 or > 20)
+        {
+            throw new ArgumentException("News limit must be between 1 and 20 articles.", nameof(limit));
+        }
+        return mlServiceClient.GetStockNewsAsync(
+            StockTicker.Create(ticker).Value,
+            lookbackDays,
+            limit,
+            cancellationToken);
+    }
+
     public async Task<StockComparisonDto> GetComparisonAsync(
         IReadOnlyList<string> tickers,
         string period,

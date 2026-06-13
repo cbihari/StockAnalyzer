@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: stockanalyzer-ml
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./ml-service/Dockerfile
+    dockerContext: ./ml-service
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_ENV
+        value: production
+      - key: MODEL_DIR
+        value: /var/data/models
+      - key: MARKET_DATA_PROVIDER
+        value: yahoo
+      - key: OPENAI_API_KEY
+        sync: false
+    disk:
+      name: stockanalyzer-models
+      mountPath: /var/data/models
+      sizeGB: 5
+
+  - type: web
+    name: stockanalyzer-api
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DATABASE_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: ML_SERVICE_URL
+        fromService:
+          type: web
+          name: stockanalyzer-ml
+          property: hostport

@@ -2,12 +2,14 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { HistoricalPrice, IndicatorResponse, MarketOverview, MlPrediction, ModelTrainingJob, ModelTrainingResult, ModelVersionsResponse, PredictionEvaluationResult, PredictionHistoryResponse, StockAnalysis, StockComparison, StockQuotesResponse, StockSuggestion, TickerModelMetrics } from './models';
+import { AiExplanationResponse, AiResearchResponse, HistoricalPrice, IndicatorResponse, MarketOverview, MlPrediction, ModelTrainingJob, ModelTrainingResult, ModelVersionsResponse, PortfolioHolding, PortfolioSummary, PredictionEvaluationResult, PredictionHistoryResponse, StockAnalysis, StockComparison, StockNews, StockQuotesResponse, StockSuggestion, TickerModelMetrics, WorkspaceAlertState, WorkspaceWatchlistItem } from './models';
+import { ClientIdentityService } from './client-identity.service';
 
 @Injectable({ providedIn: 'root' })
 export class StockApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = environment.apiUrl;
+  private readonly identity = inject(ClientIdentityService);
 
   searchStocks(query: string): Observable<StockSuggestion[]> {
     return this.http.get<StockSuggestion[]>(`${this.baseUrl}/api/stocks/search`, {
@@ -40,6 +42,13 @@ export class StockApiService {
     });
   }
 
+  getStockNews(ticker: string, lookbackDays = 7, limit = 10): Observable<StockNews> {
+    return this.http.get<StockNews>(
+      `${this.baseUrl}/api/stocks/${encodeURIComponent(ticker)}/news`,
+      { params: new HttpParams().set('lookbackDays', lookbackDays).set('limit', limit) },
+    );
+  }
+
   getHistory(ticker: string, period = '1y'): Observable<HistoricalPrice[]> {
     return this.http.get<HistoricalPrice[]>(
       `${this.baseUrl}/api/stocks/history/${encodeURIComponent(ticker)}`,
@@ -57,6 +66,21 @@ export class StockApiService {
   getMlPrediction(ticker: string): Observable<MlPrediction> {
     return this.http.get<MlPrediction>(
       `${this.baseUrl}/api/predictions/ml/${encodeURIComponent(ticker)}`,
+    );
+  }
+
+  generateAiExplanation(ticker: string, forceRefresh = false): Observable<AiExplanationResponse> {
+    return this.http.post<AiExplanationResponse>(
+      `${this.baseUrl}/api/predictions/explain-ai/${encodeURIComponent(ticker)}`,
+      null,
+      { params: new HttpParams().set('forceRefresh', forceRefresh) },
+    );
+  }
+
+  askAiResearch(ticker: string, question: string): Observable<AiResearchResponse> {
+    return this.http.post<AiResearchResponse>(
+      `${this.baseUrl}/api/research/${encodeURIComponent(ticker)}`,
+      { question },
     );
   }
 
@@ -103,4 +127,34 @@ export class StockApiService {
   evaluatePredictions(): Observable<PredictionEvaluationResult> {
     return this.http.post<PredictionEvaluationResult>(`${this.baseUrl}/api/predictions/evaluate`, null);
   }
+
+  getWorkspaceWatchlist(): Observable<WorkspaceWatchlistItem[]> {
+    return this.http.get<WorkspaceWatchlistItem[]>(`${this.baseUrl}/api/workspace/watchlist`, { headers: this.workspaceHeaders() });
+  }
+
+  saveWorkspaceWatchlist(items: WorkspaceWatchlistItem[]): Observable<WorkspaceWatchlistItem[]> {
+    return this.http.put<WorkspaceWatchlistItem[]>(`${this.baseUrl}/api/workspace/watchlist`, items, { headers: this.workspaceHeaders() });
+  }
+
+  getWorkspaceAlerts(): Observable<WorkspaceAlertState> {
+    return this.http.get<WorkspaceAlertState>(`${this.baseUrl}/api/workspace/alerts`, { headers: this.workspaceHeaders() });
+  }
+
+  saveWorkspaceAlerts(state: WorkspaceAlertState): Observable<WorkspaceAlertState> {
+    return this.http.put<WorkspaceAlertState>(`${this.baseUrl}/api/workspace/alerts`, state, { headers: this.workspaceHeaders() });
+  }
+
+  getWorkspacePortfolio(): Observable<PortfolioHolding[]> {
+    return this.http.get<PortfolioHolding[]>(`${this.baseUrl}/api/workspace/portfolio`, { headers: this.workspaceHeaders() });
+  }
+
+  saveWorkspacePortfolio(holdings: PortfolioHolding[]): Observable<PortfolioHolding[]> {
+    return this.http.put<PortfolioHolding[]>(`${this.baseUrl}/api/workspace/portfolio`, holdings, { headers: this.workspaceHeaders() });
+  }
+
+  getPortfolioSummary(): Observable<PortfolioSummary> {
+    return this.http.get<PortfolioSummary>(`${this.baseUrl}/api/portfolio/summary`, { headers: this.workspaceHeaders() });
+  }
+
+  private workspaceHeaders(): Record<string, string> { return { 'X-Client-ID': this.identity.id }; }
 }

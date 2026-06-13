@@ -29,6 +29,7 @@ services:
       MlServiceUrl: http://python-ml-service:8000
       MarketDataProviderName: ${MARKET_DATA_PROVIDER_NAME:-yahoo_finance}
       MlServicePredictionTimeoutSeconds: ${ML_PREDICTION_TIMEOUT_SECONDS:-600}
+      MlServiceAiTimeoutSeconds: ${ML_AI_TIMEOUT_SECONDS:-45}
       ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
     depends_on:
@@ -54,6 +55,15 @@ services:
       LOG_LEVEL: ${ML_LOG_LEVEL:-INFO}
       MARKET_DATA_PROVIDER: ${MARKET_DATA_PROVIDER:-yahoo}
       TRAINING_WORKERS: ${TRAINING_WORKERS:-2}
+      AI_EXPLANATIONS_ENABLED: ${AI_EXPLANATIONS_ENABLED:-true}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      OPENAI_API_KEY_FILE: /run/secrets/openai_api_key
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.5}
+      OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-low}
+      OPENAI_TIMEOUT_SECONDS: ${OPENAI_TIMEOUT_SECONDS:-30}
+      AI_RATE_LIMIT_PER_MINUTE: ${AI_RATE_LIMIT_PER_MINUTE:-10}
+    secrets:
+      - openai_api_key
     volumes:
       - ./ml-service/models:/app/models
       - ./ml-service/data/processed:/app/data/processed
@@ -85,3 +95,7 @@ services:
 
 volumes:
   postgres_data:
+
+secrets:
+  openai_api_key:
+    file: ./.secrets/openai_api_key

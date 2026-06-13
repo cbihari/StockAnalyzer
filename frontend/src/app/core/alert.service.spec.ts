@@ -1,11 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 import { AlertService } from './alert.service';
 import { MarketInstrument } from './models';
+import { StockApiService } from './stock-api.service';
+import { of } from 'rxjs';
 
 const quote: MarketInstrument = { symbol: 'AAPL', name: 'Apple', price: 200, change: 4, change_percent: .02, day_high: 201, day_low: 194, volume: 1, sparkline: [] };
 
 describe('AlertService', () => {
-  beforeEach(() => { localStorage.clear(); TestBed.resetTestingModule(); });
+  beforeEach(() => {
+    localStorage.clear(); TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [{ provide: StockApiService, useValue: { getWorkspaceAlerts: () => of({ rules: [], notifications: [] }), saveWorkspaceAlerts: (state: unknown) => of(state) } }] });
+  });
 
   it('triggers a matching price rule and disables once-only alerts', () => {
     const service = TestBed.inject(AlertService);

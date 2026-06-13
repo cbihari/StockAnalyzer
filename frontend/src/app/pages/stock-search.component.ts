@@ -8,8 +8,8 @@ import { TickerAutocompleteComponent } from '../shared/ticker-autocomplete.compo
   imports: [FormsModule, TickerAutocompleteComponent],
   template: `
     <main class="page narrow-page">
-      <p class="eyebrow">STOCK SEARCH</p><h1>Which stock should we analyze?</h1>
-      <p class="lead">Use the full Yahoo Finance ticker. Indian NSE symbols usually end in <strong>.NS</strong>.</p>
+      <p class="eyebrow">STOCK RESEARCH</p><h1>Research a stock.</h1>
+      <p class="lead">Enter a ticker to open its evidence, model estimate, risk, and technical indicators.</p>
       <form class="search-panel card" (ngSubmit)="search()" novalidate>
         <label for="ticker">Ticker symbol</label>
         <div class="search-row"><app-ticker-autocomplete inputId="ticker" describedBy="ticker-help ticker-error" [(value)]="ticker" (valueChange)="validationError = ''" (submitted)="search()" /><button type="submit">Open dashboard</button></div>

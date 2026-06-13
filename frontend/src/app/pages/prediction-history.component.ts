@@ -5,9 +5,10 @@ import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 import { PersistedPredictionHistoryItem, PredictionHistoryResponse } from '../core/models';
 import { StockApiService } from '../core/stock-api.service';
+import { InfoTipComponent } from '../shared/info-tip.component';
 
 @Component({
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, InfoTipComponent],
   template: `
     <main class="page history-page">
       <div class="history-heading">
@@ -26,15 +27,15 @@ import { StockApiService } from '../core/stock-api.service';
         </section>
 
         <form class="history-filters card" (ngSubmit)="load()">
-          <label for="history-ticker">Ticker<input id="history-ticker" name="ticker" [(ngModel)]="ticker" placeholder="All tickers" /></label>
-          <label for="history-outcome">Outcome<select id="history-outcome" name="outcome" [(ngModel)]="outcome"><option value="all">All outcomes</option><option value="pending">Pending</option><option value="correct">Correct</option><option value="wrong">Wrong</option></select></label>
+          <label for="history-ticker">Ticker<input id="history-ticker" name="ticker" [(ngModel)]="ticker" placeholder="e.g. RELIANCE.NS or AAPL" /></label>
+          <label for="history-outcome">Outcome <app-info-tip text="What actually happened after the prediction" /><select id="history-outcome" name="outcome" [(ngModel)]="outcome"><option value="all">All outcomes</option><option value="pending">Pending</option><option value="correct">Correct</option><option value="wrong">Wrong</option></select></label>
           <button type="submit" [disabled]="loading()">{{ loading() ? 'Filtering...' : 'Apply filters' }}</button>
           <button type="button" class="secondary-button" [disabled]="!data.items.length" (click)="exportCsv(data.items)">Export CSV</button>
         </form>
 
         @if (loading()) { <div class="loading card" role="status"><span class="spinner"></span><strong>Loading prediction history...</strong></div> }
         @else if (data.items.length) {
-          <div class="table-card card history-table"><table><thead><tr><th>Ticker</th><th>Estimate</th><th>Confidence</th><th>Actual</th><th>Outcome</th><th>Model</th><th>Created</th><th>Review</th></tr></thead><tbody>
+          <div class="table-card card history-table"><table><thead><tr><th>Ticker</th><th>Estimate</th><th>Confidence <app-info-tip text="How strongly the model favors its estimate based on current inputs." /></th><th>Actual</th><th>Outcome</th><th>Model</th><th>Created</th><th>Review</th></tr></thead><tbody>
             @for (item of data.items; track item.id) {
               <tr><td><a [routerLink]="['/stocks', item.ticker]">{{ item.ticker }}</a></td><td><span class="badge" [class.down]="item.prediction === 'DOWN'">{{ item.prediction }}</span></td><td>{{ item.confidence }}%</td><td>{{ item.actual_result ?? 'Pending' }}</td><td><span class="outcome-badge" [class.correct]="item.is_correct === true" [class.wrong]="item.is_correct === false">{{ outcomeLabel(item) }}</span></td><td>{{ modelLabel(item) }}</td><td>{{ item.created_at | date:'medium' }}</td><td><details><summary>Explain</summary><p>{{ outcomeExplanation(item) }}</p></details></td></tr>
             }

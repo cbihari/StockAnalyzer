@@ -13,6 +13,7 @@ FastAPI service for stock market data and the project's baseline prediction API.
 - `POST /models/train/jobs?ticker=TCS.NS&period=5y` - queue background training
 - `GET /models/train/jobs/{job_id}` - inspect training status and metrics
 - `GET /models/versions?ticker=TCS.NS` - list immutable model versions
+- `GET /stocks/news?ticker=AAPL&lookback_days=7&limit=10` - source-linked headlines with deterministic sentiment and catalyst labels
 - `POST /predict` - deterministic placeholder prediction
 - `GET /docs` - interactive OpenAPI documentation
 
@@ -55,8 +56,14 @@ curl "http://localhost:8000/stock/history?ticker=RELIANCE.NS&period=5y"
 curl "http://localhost:8000/stock/indicators?ticker=RELIANCE.NS&period=5y"
 curl "http://localhost:8000/predict/rule-based?ticker=RELIANCE.NS"
 curl "http://localhost:8000/predict/ml?ticker=RELIANCE.NS"
+curl "http://localhost:8000/stocks/news?ticker=AAPL&lookback_days=7&limit=10"
 curl -X POST "http://localhost:8000/models/train?ticker=TCS.NS&period=5y"
 ```
+
+The news endpoint uses the configured market-data provider, deduplicates recent
+headlines, and applies deterministic keyword scoring for sentiment, topic, and
+potential impact. Results are cached for 15 minutes. Headline tone is research
+context, not a stock-price forecast. No LLM or paid news API is used yet.
 
 `/predict/ml` returns a `rule_based_fallback` response when a model cannot be
 trained because the ticker is invalid, fewer than 250 historical rows are

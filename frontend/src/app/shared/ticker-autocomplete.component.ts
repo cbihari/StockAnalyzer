@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnDestroy, Output, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, inject, signal } from '@angular/core';
 import { Subject, catchError, debounceTime, distinctUntilChanged, finalize, of, switchMap, takeUntil } from 'rxjs';
 import { StockSuggestion } from '../core/models';
 import { StockApiService } from '../core/stock-api.service';
@@ -54,7 +54,7 @@ import { normalizeTicker, tickerValidationMessage } from '../core/ticker-validat
       }
     </div>`,
 })
-export class TickerAutocompleteComponent implements OnDestroy {
+export class TickerAutocompleteComponent implements OnChanges, OnDestroy {
   private readonly api = inject(StockApiService);
   private readonly queryChanges = new Subject<string>();
   private readonly destroyed = new Subject<void>();
@@ -64,7 +64,7 @@ export class TickerAutocompleteComponent implements OnDestroy {
   @Input() inputId = 'ticker';
   @Input() ariaLabel = 'Ticker symbol';
   @Input() describedBy = '';
-  @Input() placeholder = 'RELIANCE.NS';
+  @Input() placeholder = 'e.g. RELIANCE.NS or AAPL';
   @Output() readonly valueChange = new EventEmitter<string>();
   @Output() readonly tickerSelected = new EventEmitter<string>();
   @Output() readonly submitted = new EventEmitter<void>();
@@ -93,6 +93,12 @@ export class TickerAutocompleteComponent implements OnDestroy {
     ).subscribe((suggestions) => {
       this.suggestions.set(suggestions); this.activeIndex.set(suggestions.length ? 0 : -1);
     });
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['value'] && this.value.trim().length < 2) {
+      this.open.set(false); this.suggestions.set([]); this.activeIndex.set(-1);
+    }
   }
 
   ngOnDestroy(): void { this.destroyed.next(); this.destroyed.complete(); this.clearBlurTimer(); }

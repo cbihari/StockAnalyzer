@@ -17,7 +17,7 @@ import { AlertDraft, AlertFrequency, AlertService, AlertType } from '../core/ale
         <div><p class="eyebrow">DAILY RESEARCH LIST</p><h1>Your watchlist</h1><p class="lead">A compact delayed snapshot of stocks you want to research again.</p></div>
         <a class="secondary-button link-button" routerLink="/search">Add stocks</a>
       </div>
-      <div class="watchlist-note notice">Saved in this browser for now. Account sync and alerts will plug into the same watchlist contract later.</div>
+      <div class="watchlist-note notice"><strong>{{ syncLabel() }}</strong> {{ watchlist.syncState() === 'offline' ? 'Changes remain cached in this browser and will sync when the API returns.' : 'This anonymous workspace is persisted in PostgreSQL and cached in this browser.' }}</div>
       @if (availableTags().length) {
         <div class="watchlist-filters" aria-label="Filter watchlist by tag"><span>Filter</span><button type="button" [class.active]="!activeTag()" (click)="activeTag.set('')">All</button>@for (tag of availableTags(); track tag) { <button type="button" [class.active]="activeTag() === tag" (click)="activeTag.set(tag)">#{{ tag }}</button> }</div>
       }
@@ -112,4 +112,5 @@ export class WatchlistComponent implements OnInit {
     const draft: AlertDraft = { type: this.alertType, threshold: this.alertThreshold, frequency: this.alertFrequency, cooldownHours: this.alertCooldown, quietStart: this.quietStart, quietEnd: this.quietEnd };
     this.alerts.add(ticker, draft); this.alertThreshold = this.quotes().find((item) => item.symbol === ticker)?.price ?? 0;
   }
+  syncLabel(): string { return this.watchlist.syncState() === 'synced' ? 'Workspace synced.' : this.watchlist.syncState() === 'syncing' ? 'Syncing workspace...' : this.watchlist.syncState() === 'offline' ? 'Offline mode.' : 'Local workspace.'; }
 }
