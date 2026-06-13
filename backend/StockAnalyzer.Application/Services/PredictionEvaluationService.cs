@@ -75,6 +75,8 @@ public sealed class PredictionEvaluationService(
         predictionRepository.GetAccuracyAsync(cancellationToken);
 
     public async Task<PredictionHistoryDto> GetHistoryAsync(
+        Guid? userId,
+        string workspaceId,
         string? ticker,
         string outcome,
         int limit,
@@ -88,6 +90,8 @@ public sealed class PredictionEvaluationService(
 
         var safeLimit = Math.Clamp(limit, 1, 500);
         var predictions = await predictionRepository.GetHistoryAsync(
+            userId,
+            workspaceId,
             ticker,
             normalizedOutcome,
             safeLimit,

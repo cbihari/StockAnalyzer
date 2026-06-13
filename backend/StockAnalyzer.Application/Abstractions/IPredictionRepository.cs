@@ -8,6 +8,8 @@ public interface IPredictionRepository
     Task AddAsync(Prediction prediction, CancellationToken cancellationToken);
     Task<IReadOnlyList<Prediction>> GetUnevaluatedAsync(CancellationToken cancellationToken);
     Task<IReadOnlyList<Prediction>> GetHistoryAsync(
+        Guid? userId,
+        string workspaceId,
         string? ticker,
         string outcome,
         int limit,

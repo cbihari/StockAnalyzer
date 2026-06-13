@@ -1,0 +1,15 @@
+<main class="auth-page">
+  <section class="auth-card card">
+    <p class="eyebrow">YOUR RESEARCH WORKSPACE</p>
+    <h1>Welcome back.</h1>
+    <p class="lead">Sign in to keep watchlists and portfolio data available across devices.</p>
+    <form (ngSubmit)="submit()">
+      <label>Email<input type="email" name="email" [(ngModel)]="email" autocomplete="email" required></label>
+      <label>Password<input type="password" name="password" [(ngModel)]="password" autocomplete="current-password" required></label>
+      @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
+      <button class="primary" type="submit" [disabled]="loading()">{{ loading() ? 'Signing in...' : 'Log in' }}</button>
+    </form>
+    <a class="google-button" [href]="googleUrl">Continue with Google</a>
+    <p class="auth-switch">New to StockAnalyzer? <a routerLink="/signup">Create an account</a></p>
+  </section>
+</main>

@@ -4,5 +4,5 @@ namespace StockAnalyzer.Application.Abstractions;
 
 public interface IPortfolioService
 {
-    Task<PortfolioSummaryDto> GetSummaryAsync(string clientId, CancellationToken cancellationToken);
+    Task<PortfolioSummaryDto> GetSummaryAsync(Guid? userId, string clientId, CancellationToken cancellationToken);
 }

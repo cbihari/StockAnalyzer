@@ -401,3 +401,27 @@ export interface PredictionEvaluationResult {
   evaluatedPredictions: number;
   pendingPredictions: number;
 }
+
+export interface AffiliatePartner {
+  name: string;
+  url: string;
+  logo: string;
+}
+
+export interface AffiliateClickStat {
+  broker: string;
+  date: string;
+  clicks: number;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  displayName: string;
+  createdAt: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: AuthUser;
+}

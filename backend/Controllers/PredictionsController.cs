@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using StockAnalyzer.Api.Auth;
 using StockAnalyzer.Application.Abstractions;
 using StockAnalyzer.Application.DTOs;
 
@@ -44,11 +45,14 @@ public sealed class PredictionsController(
     [ProducesResponseType<PredictionHistoryDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PredictionHistoryDto>> GetHistory(
+        [FromHeader(Name = "X-Client-ID")] string workspaceId,
         [FromQuery] string? ticker = null,
         [FromQuery] string outcome = "all",
         [FromQuery] int limit = 100,
         CancellationToken cancellationToken = default) =>
         Ok(await predictionEvaluationService.GetHistoryAsync(
+            User.GetUserId(),
+            workspaceId,
             ticker,
             outcome,
             limit,

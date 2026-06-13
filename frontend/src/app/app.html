@@ -15,7 +15,12 @@
       <a routerLink="/learn" routerLinkActive="active"><span>◇</span> Learn</a>
       <a routerLink="/history" routerLinkActive="active"><span>↗</span> History</a>
       <a routerLink="/accuracy" routerLinkActive="active"><span>◎</span> Models</a>
+      <a class="upgrade-link" routerLink="/upgrade" routerLinkActive="active"><span>↑</span> Upgrade</a>
     </nav>
+    <div class="sidebar-auth-mobile">
+      @if (auth.currentUser(); as user) { <span>{{ user.displayName }}</span><button type="button" (click)="logout()">Log out</button> }
+      @else { <a routerLink="/login">Log in</a><a routerLink="/signup">Sign up</a> }
+    </div>
     <p class="sidebar-note">Educational analysis only. Not financial advice.</p>
   </aside>
   <div class="workspace">
@@ -23,7 +28,24 @@
       <span class="status-dot"></span>
       <span>Research systems online</span>
       <a class="notification-link" routerLink="/notifications" aria-label="Open notifications">Alerts @if (alerts.unreadCount()) { <b>{{ alerts.unreadCount() }}</b> }</a>
+      <div class="auth-nav">
+        @if (auth.currentUser(); as user) {
+          <span>{{ user.displayName }}</span><button type="button" (click)="logout()">Log out</button>
+        } @else {
+          <a routerLink="/login">Log in</a><a class="signup-link" routerLink="/signup">Sign up</a>
+        }
+      </div>
     </header>
     <router-outlet />
   </div>
 </div>
+@if (claimPrompt()) {
+  <div class="claim-backdrop" role="presentation">
+    <section class="claim-dialog card" role="dialog" aria-modal="true" aria-labelledby="claim-title">
+      <p class="eyebrow">LINK YOUR RESEARCH</p>
+      <h2 id="claim-title">Found existing watchlist/portfolio data — link it to your account?</h2>
+      <p>This keeps this browser's saved research available when you sign in elsewhere.</p>
+      <div><button type="button" class="claim-secondary" (click)="skipClaim()">Not now</button><button type="button" class="claim-primary" [disabled]="claimLoading()" (click)="claimWorkspace()">{{ claimLoading() ? 'Linking...' : 'Link data' }}</button></div>
+    </section>
+  </div>
+}

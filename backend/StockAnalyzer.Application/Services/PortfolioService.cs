@@ -8,10 +8,11 @@ public sealed class PortfolioService(
     IStockAnalysisService stockAnalysisService) : IPortfolioService
 {
     public async Task<PortfolioSummaryDto> GetSummaryAsync(
+        Guid? userId,
         string clientId,
         CancellationToken cancellationToken)
     {
-        var holdings = await workspaceService.GetPortfolioAsync(clientId, cancellationToken);
+        var holdings = await workspaceService.GetPortfolioAsync(userId, clientId, cancellationToken);
         if (holdings.Count == 0)
         {
             return new PortfolioSummaryDto(

@@ -7,6 +7,8 @@ public interface IPredictionEvaluationService
     Task<PredictionEvaluationDto> EvaluateAsync(CancellationToken cancellationToken);
     Task<PredictionAccuracyDto> GetAccuracyAsync(CancellationToken cancellationToken);
     Task<PredictionHistoryDto> GetHistoryAsync(
+        Guid? userId,
+        string workspaceId,
         string? ticker,
         string outcome,
         int limit,

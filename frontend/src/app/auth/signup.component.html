@@ -1,0 +1,16 @@
+<main class="auth-page">
+  <section class="auth-card card">
+    <p class="eyebrow">CREATE YOUR WORKSPACE</p>
+    <h1>Save your research.</h1>
+    <p class="lead">Create an account without changing how anonymous research works.</p>
+    <form (ngSubmit)="submit()">
+      <label>Display name<input type="text" name="displayName" [(ngModel)]="displayName" autocomplete="name" minlength="2" maxlength="80" required></label>
+      <label>Email<input type="email" name="email" [(ngModel)]="email" autocomplete="email" required></label>
+      <label>Password<input type="password" name="password" [(ngModel)]="password" autocomplete="new-password" minlength="8" required><small>Use at least 8 characters.</small></label>
+      @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
+      <button class="primary" type="submit" [disabled]="loading()">{{ loading() ? 'Creating account...' : 'Sign up' }}</button>
+    </form>
+    <a class="google-button" [href]="googleUrl">Continue with Google</a>
+    <p class="auth-switch">Already have an account? <a routerLink="/login">Log in</a></p>
+  </section>
+</main>

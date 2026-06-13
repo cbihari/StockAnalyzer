@@ -10,10 +10,26 @@ nav a { display: flex; align-items: center; gap: 11px; padding: 12px 13px; borde
 nav a span { width: 19px; color: #6c7971; font-size: 1rem; text-align: center; }
 nav a:hover, nav a.active { border-color: rgba(99,241,174,.12); color: var(--text); background: rgba(99,241,174,.07); }
 nav a.active span { color: var(--accent); }
+.upgrade-link { margin-top: 3px; opacity: .76; }
+.upgrade-link:hover, .upgrade-link.active { opacity: 1; }
 .sidebar-note { margin-top: auto; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: rgba(255,255,255,.018); color: #707b74; font-size: .68rem; line-height: 1.55; }
 .workspace { min-width: 0; }
 header { height: 58px; padding: 0 34px; border-bottom: 1px solid var(--border); display: flex; justify-content: flex-end; align-items: center; gap: 9px; color: var(--muted); font-size: .72rem; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px rgba(88,235,166,.65); }
 .notification-link { display: inline-flex; align-items: center; gap: 7px; margin-left: 13px; padding-left: 18px; border-left: 1px solid var(--border); color: #aab5ae; text-decoration: none; }
 .notification-link b { display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--danger); color: #190606; font-size: .63rem; }
-@media (max-width: 780px) { .app-shell { grid-template-columns: 1fr; } .sidebar { position: static; height: auto; padding: 16px; border-right: 0; border-bottom: 1px solid var(--border); } nav { grid-template-columns: repeat(3, 1fr); margin-top: 16px; } nav a { justify-content: center; padding: 10px 7px; } .sidebar-note, header { display: none; } }
+.auth-nav { display: flex; align-items: center; gap: 9px; margin-left: 10px; padding-left: 18px; border-left: 1px solid var(--border); }
+.auth-nav a, .auth-nav button, .sidebar-auth-mobile a, .sidebar-auth-mobile button { border: 0; color: #aab5ae; background: transparent; font: inherit; text-decoration: none; }
+.auth-nav .signup-link { padding: 7px 10px; border: 1px solid rgba(99,241,174,.24); border-radius: 7px; color: var(--accent); }
+.auth-nav button:hover, .auth-nav a:hover, .sidebar-auth-mobile button:hover, .sidebar-auth-mobile a:hover { color: var(--text); }
+.sidebar-auth-mobile { display: none; }
+.claim-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(2,5,4,.72); backdrop-filter: blur(8px); }
+.claim-dialog { width: min(100%, 520px); padding: 27px; }
+.claim-dialog h2 { margin: 8px 0 10px; font-size: 1.2rem; line-height: 1.4; }
+.claim-dialog > p:not(.eyebrow) { color: var(--muted); font-size: .78rem; line-height: 1.65; }
+.claim-dialog > div { display: flex; justify-content: flex-end; gap: 9px; margin-top: 22px; }
+.claim-dialog button { padding: 10px 14px; border-radius: 8px; font-size: .74rem; font-weight: 800; }
+.claim-secondary { border: 1px solid var(--border); color: #aeb9b2; background: transparent; }
+.claim-primary { border: 0; color: #06120c; background: var(--accent); }
+.claim-primary:disabled { opacity: .55; }
+@media (max-width: 780px) { .app-shell { grid-template-columns: 1fr; } .sidebar { position: static; height: auto; padding: 16px; border-right: 0; border-bottom: 1px solid var(--border); } nav { grid-template-columns: repeat(3, 1fr); margin-top: 16px; } nav a { justify-content: center; padding: 10px 7px; } .sidebar-note, header { display: none; } .sidebar-auth-mobile { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 14px; color: var(--muted); font-size: .72rem; } }

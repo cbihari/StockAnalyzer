@@ -15,5 +15,10 @@ export const routes: Routes = [
   { path: 'notifications', loadComponent: () => import('./pages/notifications.component').then((m) => m.NotificationsComponent) },
   { path: 'history', loadComponent: () => import('./pages/prediction-history.component').then((m) => m.PredictionHistoryComponent) },
   { path: 'accuracy', loadComponent: () => import('./pages/model-accuracy.component').then((m) => m.ModelAccuracyComponent) },
+  { path: 'upgrade', loadComponent: () => import('./pages/upgrade.component').then((m) => m.UpgradeComponent) },
+  { path: 'login', loadComponent: () => import('./auth/login.component').then((m) => m.LoginComponent) },
+  { path: 'signup', loadComponent: () => import('./auth/signup.component').then((m) => m.SignupComponent) },
+  { path: 'auth/callback', loadComponent: () => import('./auth/auth-callback.component').then((m) => m.AuthCallbackComponent) },
+  { path: 'admin/affiliate-stats', loadComponent: () => import('./pages/affiliate-stats.component').then((m) => m.AffiliateStatsComponent) },
   { path: '**', redirectTo: '' },
 ];
