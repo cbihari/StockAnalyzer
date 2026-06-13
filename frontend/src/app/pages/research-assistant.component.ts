@@ -29,7 +29,7 @@ import { TickerAutocompleteComponent } from '../shared/ticker-autocomplete.compo
         <div class="assistant-fields">
           <label>
             <span>STOCK</span>
-            <app-ticker-autocomplete inputId="assistant-ticker" ariaLabel="Stock ticker" placeholder="AAPL or RELIANCE.NS" [value]="ticker()" (valueChange)="ticker.set($event)" (submitted)="ask()" />
+            <app-ticker-autocomplete inputId="assistant-ticker" ariaLabel="Stock ticker" [value]="ticker()" (valueChange)="ticker.set($event)" (submitted)="ask()" />
           </label>
           <label class="question-field">
             <span id="assistant-question-heading">YOUR RESEARCH QUESTION</span>

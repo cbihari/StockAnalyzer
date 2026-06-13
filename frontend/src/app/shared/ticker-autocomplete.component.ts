@@ -64,7 +64,7 @@ export class TickerAutocompleteComponent implements OnChanges, OnDestroy {
   @Input() inputId = 'ticker';
   @Input() ariaLabel = 'Ticker symbol';
   @Input() describedBy = '';
-  @Input() placeholder = 'RELIANCE.NS';
+  @Input() placeholder = 'e.g. RELIANCE.NS or AAPL';
   @Output() readonly valueChange = new EventEmitter<string>();
   @Output() readonly tickerSelected = new EventEmitter<string>();
   @Output() readonly submitted = new EventEmitter<void>();

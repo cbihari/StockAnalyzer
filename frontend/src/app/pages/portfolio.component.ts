@@ -19,8 +19,8 @@ import { TickerAutocompleteComponent } from '../shared/ticker-autocomplete.compo
         <div class="section-title"><h2>Add a holding</h2><span>{{ portfolio.holdings().length }}/50 holdings</span></div>
         <div class="holding-form-grid">
           <label>Ticker<app-ticker-autocomplete inputId="portfolio-ticker" ariaLabel="Holding ticker" [(value)]="ticker" (valueChange)="formError.set('')" /></label>
-          <label>Quantity<input name="quantity" [(ngModel)]="quantity" type="number" min="0.000001" step="any" placeholder="10" required /></label>
-          <label>Average cost<input name="averageCost" [(ngModel)]="averageCost" type="number" min="0.0001" step="any" placeholder="150.00" required /><small>Use the ticker's native currency</small></label>
+          <label>Quantity<input name="quantity" [(ngModel)]="quantity" type="number" min="0.000001" step="any" placeholder="Number of shares you own" required /></label>
+          <label>Average cost<input name="averageCost" [(ngModel)]="averageCost" type="number" min="0.0001" step="any" placeholder="Price per share when you bought it" required /><small>Use the ticker's native currency</small></label>
           <label>Purchase date<input name="purchasedAt" [(ngModel)]="purchasedAt" type="date" /></label>
           <label class="holding-note-field">Research note<input name="note" [(ngModel)]="note" maxlength="300" placeholder="Why is this holding in the portfolio?" /></label>
           <button type="submit" [disabled]="portfolio.holdings().length >= 50">Add holding</button>

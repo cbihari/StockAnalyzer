@@ -1,19 +1,21 @@
 import { Component } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TickerAutocompleteComponent } from '../shared/ticker-autocomplete.component';
+import { InfoTipComponent } from '../shared/info-tip.component';
 import { normalizeTicker, tickerValidationMessage } from '../core/ticker-validation';
 
 @Component({
-  imports: [RouterLink, TickerAutocompleteComponent],
+  imports: [RouterLink, TickerAutocompleteComponent, InfoTipComponent],
   template: `
     <main class="landing-page">
       <section class="hero-section">
         <div class="hero-copy">
           <p class="eyebrow">EXPLAINABLE AI STOCK RESEARCH</p>
           <h1>See the signal.<br /><span>Understand the evidence.</span></h1>
-          <p class="hero-lead">Research Indian and US stocks with technical context, ticker-specific model estimates, visible uncertainty, and practical explanations.</p>
+          <p class="hero-lead">Research Indian and US stocks with clear evidence, visible uncertainty, and practical explanations.</p>
+          <div class="how-it-works"><strong>How this works:</strong> Home → Research a ticker → Review the dashboard → Learn unfamiliar terms.</div>
           <form class="hero-search" (submit)="analyze($event)">
-            <app-ticker-autocomplete inputId="hero-ticker" ariaLabel="Search ticker or company" placeholder="Search AAPL, Reliance, TCS..." [(value)]="ticker" (submitted)="openTicker()" />
+            <app-ticker-autocomplete inputId="hero-ticker" ariaLabel="Search ticker or company" [(value)]="ticker" (submitted)="openTicker()" />
             <button type="submit">Research stock <span>→</span></button>
           </form>
           @if (error) { <p class="field-error">{{ error }}</p> }
@@ -24,8 +26,8 @@ import { normalizeTicker, tickerValidationMessage } from '../core/ticker-validat
           <header><div><span class="preview-symbol">RELIANCE.NS</span><small>Reliance Industries</small></div><span class="live-pill">RESEARCH BRIEF</span></header>
           <div class="preview-price"><strong>₹1,405.30</strong><span>+1.24% today</span></div>
           <div class="preview-chart" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><svg viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M0,82 C45,78 52,62 96,69 S155,84 195,55 S250,62 290,42 S350,49 385,25 S450,38 500,12" /></svg></div>
-          <div class="preview-grid"><div><span>MODEL ESTIMATE</span><strong class="positive">UP</strong><small>68% confidence</small></div><div><span>RISK</span><strong>MEDIUM</strong><small>Signals mostly aligned</small></div></div>
-          <div class="preview-signal"><span>✓</span><div><strong>Trend supports the estimate</strong><small>EMA20 is above EMA50</small></div></div>
+          <div class="preview-grid"><div><span>MODEL ESTIMATE</span><strong class="positive">UP</strong><small>68% confidence <app-info-tip text="How strongly the model favors its estimate based on current inputs." /></small></div><div><span>RISK LEVEL <app-info-tip text="Overall uncertainty based on volatility, signal agreement, and data quality." /></span><strong>MEDIUM</strong><small>Signals mostly aligned</small></div></div>
+          <div class="preview-signal"><span>✓</span><div><strong>Trend supports the estimate</strong><small>EMA20 <app-info-tip text="Tracks the recent trend with extra weight on newer prices." /> is above EMA50 <app-info-tip text="Tracks the medium-term trend with extra weight on newer prices." /></small></div></div>
           <div class="preview-signal conflict"><span>!</span><div><strong>Volume is not confirming</strong><small>Participation remains below average</small></div></div>
         </article>
       </section>
@@ -34,7 +36,7 @@ import { normalizeTicker, tickerValidationMessage } from '../core/ticker-validat
 
       <section class="value-section">
         <div><p class="eyebrow">A BETTER RESEARCH LOOP</p><h2>One workspace. More honest answers.</h2></div>
-        <div class="value-grid"><article><span>01</span><h3>Structured evidence</h3><p>Supporting, conflicting, and neutral signals are separated so uncertainty stays visible.</p></article><article><span>02</span><h3>Model transparency</h3><p>Every ticker model shows its status, training date, and historical test performance.</p></article><article><span>03</span><h3>Risk beside direction</h3><p>Confidence never stands alone. Signal disagreement, volatility, and data quality shape risk.</p></article><article><span>04</span><h3>Learn in context</h3><p>Understand RSI, MACD, trends, and volume while researching a real stock.</p></article></div>
+        <div class="value-grid"><article><span>01</span><h3>Structured evidence</h3><p>Supporting, conflicting, and neutral signals are separated so uncertainty stays visible.</p></article><article><span>02</span><h3>Model transparency</h3><p>Every ticker model shows its status, training date, and historical test performance.</p></article><article><span>03</span><h3>Risk beside direction</h3><p>Confidence <app-info-tip text="How strongly the model favors its estimate based on current inputs." /> never stands alone. Signal disagreement, volatility <app-info-tip text="How widely and quickly the stock price tends to move." />, and data quality shape risk.</p></article><article><span>04</span><h3>Learn in context</h3><p>Understand RSI <app-info-tip text="Shows whether recent price moves may be overbought or oversold." />, MACD <app-info-tip text="Shows if price momentum is speeding up or slowing down." />, trends, and volume while researching a real stock.</p></article></div>
       </section>
     </main>`,
 })

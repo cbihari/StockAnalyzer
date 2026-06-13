@@ -4,9 +4,10 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 import { StockNews } from '../core/models';
 import { StockApiService } from '../core/stock-api.service';
+import { InfoTipComponent } from '../shared/info-tip.component';
 
 @Component({
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, InfoTipComponent],
   template: `
     <main class="page news-page">
       <div class="news-heading"><div><p class="eyebrow">NEWS & CATALYSTS</p><h1>{{ ticker }}</h1><p class="lead">Source-linked headlines organized by tone, potential impact, and topic. Sentiment is context, not a forecast.</p></div><a class="secondary" [routerLink]="['/stocks', ticker]">Back to research brief</a></div>
@@ -16,7 +17,7 @@ import { StockApiService } from '../core/stock-api.service';
       @if (news(); as data) {
         <section class="news-summary-grid">
           <article class="card sentiment-card" [class.negative]="data.overall_sentiment === 'NEGATIVE'"><span>HEADLINE SENTIMENT</span><strong>{{ data.overall_sentiment }}</strong><p>Score {{ signedScore(data.sentiment_score) }} from {{ data.article_count }} recent articles</p></article>
-          <article class="card"><span>DATA COVERAGE</span><strong>{{ data.coverage }}</strong><p>{{ data.confidence | percent:'1.0-0' }} scoring confidence · {{ data.lookback_days }} day lookback</p></article>
+          <article class="card"><span>DATA COVERAGE</span><strong>{{ data.coverage }}</strong><p>{{ data.confidence | percent:'1.0-0' }} scoring confidence <app-info-tip text="How reliable the headline scoring appears from available data." /> · {{ data.lookback_days }} day lookback</p></article>
           <article class="card"><span>LEADING CATALYST</span><strong>{{ data.highest_impact_topic ?? 'No recent catalyst' }}</strong><p>{{ data.positive_count }} positive · {{ data.neutral_count }} neutral · {{ data.negative_count }} negative</p></article>
         </section>
         <div class="notice warning news-warning">{{ data.warning }} Updated {{ data.as_of | date:'medium' }} via {{ data.data_source }}.</div>

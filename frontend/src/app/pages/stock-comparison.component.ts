@@ -8,16 +8,17 @@ import { StockApiService } from '../core/stock-api.service';
 import { normalizeTicker, tickerValidationMessage } from '../core/ticker-validation';
 import { ComparisonChartComponent } from '../shared/comparison-chart.component';
 import { TickerAutocompleteComponent } from '../shared/ticker-autocomplete.component';
+import { InfoTipComponent } from '../shared/info-tip.component';
 
 @Component({
-  imports: [CommonModule, FormsModule, RouterLink, ComparisonChartComponent, TickerAutocompleteComponent],
+  imports: [CommonModule, FormsModule, RouterLink, ComparisonChartComponent, TickerAutocompleteComponent, InfoTipComponent],
   template: `
     <main class="page compare-page">
       <p class="eyebrow">MULTI-STOCK RESEARCH</p><h1>Compare the evidence.</h1><p class="lead">Compare two or three stocks across price performance, directional estimates, risk, technical context, and measured model reliability.</p>
       <form class="compare-builder card" (ngSubmit)="compare()">
-        <label>Stock 1<app-ticker-autocomplete inputId="compare-one" ariaLabel="First stock" [(value)]="tickerOne" placeholder="AAPL" /></label>
-        <label>Stock 2<app-ticker-autocomplete inputId="compare-two" ariaLabel="Second stock" [(value)]="tickerTwo" placeholder="MSFT" /></label>
-        <label>Stock 3 · optional<app-ticker-autocomplete inputId="compare-three" ariaLabel="Third stock optional" [(value)]="tickerThree" placeholder="RELIANCE.NS" /></label>
+        <label>Stock 1<app-ticker-autocomplete inputId="compare-one" ariaLabel="First stock" [(value)]="tickerOne" /></label>
+        <label>Stock 2<app-ticker-autocomplete inputId="compare-two" ariaLabel="Second stock" [(value)]="tickerTwo" /></label>
+        <label>Stock 3 · optional<app-ticker-autocomplete inputId="compare-three" ariaLabel="Third stock optional" [(value)]="tickerThree" /></label>
         <label>Period<select name="period" [(ngModel)]="period"><option value="3mo">3 months</option><option value="6mo">6 months</option><option value="1y">1 year</option><option value="2y">2 years</option><option value="5y">5 years</option></select></label>
         <button type="submit" [disabled]="loading()">{{ loading() ? 'Comparing...' : 'Compare stocks' }}</button>
       </form>
@@ -31,8 +32,8 @@ import { TickerAutocompleteComponent } from '../shared/ticker-autocomplete.compo
           @for (stock of data.stocks; track stock.ticker) {
             <article class="card comparison-stock-card">
               <div class="comparison-stock-header"><div><a [routerLink]="['/stocks', stock.ticker]">{{ stock.ticker }}</a><span>{{ stock.trend }} trend</span></div><strong>{{ stock.quote.currency === 'INR' ? '₹' : '$' }}{{ stock.quote.latestPrice | number:'1.2-2' }}</strong></div>
-              <div class="comparison-metrics"><div><span>Estimate</span><strong [class.negative]="stock.prediction.prediction === 'DOWN'">{{ stock.prediction.prediction }}</strong><small>{{ stock.prediction.confidence }}% confidence</small></div><div><span>Risk</span><strong>{{ stock.risk.level }}</strong><small>{{ stock.risk.score }}/100</small></div><div><span>Model accuracy</span><strong>{{ stock.prediction.model_accuracy === null ? 'N/A' : (stock.prediction.model_accuracy | percent:'1.0-1') }}</strong><small>Historical holdout</small></div><div><span>Period return</span><strong [class.negative]="periodReturn(stock) < 0">{{ periodReturn(stock) | percent:'1.1-1' }}</strong><small>{{ data.period | uppercase }}</small></div></div>
-              <div class="comparison-context"><p><b>RSI</b> {{ stock.indicators.latest.RSI_14 | number:'1.1-1' }}</p><p><b>Volatility</b> {{ stock.marketContext.annualizedVolatility | percent:'1.1-1' }}</p><p><b>Support</b> {{ stock.quote.currency === 'INR' ? '₹' : '$' }}{{ stock.marketContext.support | number:'1.2-2' }}</p><p><b>Resistance</b> {{ stock.quote.currency === 'INR' ? '₹' : '$' }}{{ stock.marketContext.resistance | number:'1.2-2' }}</p></div>
+              <div class="comparison-metrics"><div><span>Estimate</span><strong [class.negative]="stock.prediction.prediction === 'DOWN'">{{ stock.prediction.prediction }}</strong><small>{{ stock.prediction.confidence }}% confidence <app-info-tip text="How strongly the model favors its estimate based on current inputs." /></small></div><div><span>Risk level <app-info-tip text="Overall uncertainty based on volatility, signal agreement, and data quality." /></span><strong>{{ stock.risk.level }}</strong><small>{{ stock.risk.score }}/100</small></div><div><span>Model accuracy <app-info-tip text="Share of historical test predictions the model got right." /></span><strong>{{ stock.prediction.model_accuracy === null ? 'N/A' : (stock.prediction.model_accuracy | percent:'1.0-1') }}</strong><small>Historical holdout</small></div><div><span>Period return</span><strong [class.negative]="periodReturn(stock) < 0">{{ periodReturn(stock) | percent:'1.1-1' }}</strong><small>{{ data.period | uppercase }}</small></div></div>
+              <div class="comparison-context"><p><b>RSI <app-info-tip text="Shows whether recent price moves may be overbought or oversold." /></b> {{ stock.indicators.latest.RSI_14 | number:'1.1-1' }}</p><p><b>Volatility <app-info-tip text="How widely and quickly the stock price tends to move." /></b> {{ stock.marketContext.annualizedVolatility | percent:'1.1-1' }}</p><p><b>Support <app-info-tip text="A recent price area where declines have often slowed." /></b> {{ stock.quote.currency === 'INR' ? '₹' : '$' }}{{ stock.marketContext.support | number:'1.2-2' }}</p><p><b>Resistance <app-info-tip text="A recent price area where advances have often slowed." /></b> {{ stock.quote.currency === 'INR' ? '₹' : '$' }}{{ stock.marketContext.resistance | number:'1.2-2' }}</p></div>
               <div class="comparison-evidence"><span>{{ stock.supportingSignals.length }} supporting</span><span>{{ stock.conflictingSignals.length }} conflicting</span><span>{{ modelLabel(stock) }}</span></div>
             </article>
           }

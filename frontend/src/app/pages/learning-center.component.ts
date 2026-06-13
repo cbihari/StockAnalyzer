@@ -3,9 +3,10 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LEARNING_GLOSSARY, LEARNING_LESSONS, LearningLesson, findLesson } from '../core/learning-content';
 import { LearningProgressService } from '../core/learning-progress.service';
+import { InfoTipComponent } from '../shared/info-tip.component';
 
 @Component({
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, InfoTipComponent],
   template: `
     <main class="page learning-page">
       @if (lesson(); as item) {
@@ -28,13 +29,13 @@ import { LearningProgressService } from '../core/learning-progress.service';
           <aside class="lesson-sidebar card"><span>YOUR PROGRESS</span><strong>{{ progress.has(item.slug) ? 'Lesson understood' : 'Ready when you are' }}</strong><p>Completion is saved in this browser. It is a learning marker, not a certification.</p><button type="button" [disabled]="progress.has(item.slug)" (click)="complete(item.slug)">{{ progress.has(item.slug) ? 'Completed' : 'Mark as understood' }}</button><a routerLink="/stocks/AAPL">See indicators on AAPL →</a></aside>
         </section>
       } @else {
-        <div class="learning-heading"><div><p class="eyebrow">LEARNING CENTER</p><h1>Understand the evidence, not just the signal.</h1><p class="lead">Short, practical lessons for reading technical indicators, model outputs, and risk with more confidence.</p></div><div class="learning-score"><strong>{{ completedCount() }}/{{ lessons.length }}</strong><span>lessons understood</span><div><i [style.width.%]="completionPercent()"></i></div></div></div>
+        <div class="learning-heading"><div><p class="eyebrow">LEARNING CENTER</p><h1>Understand unfamiliar research terms.</h1><p class="lead">Use these short lessons when a dashboard indicator or model output needs context.</p></div><div class="learning-score"><strong>{{ completedCount() }}/{{ lessons.length }}</strong><span>lessons understood</span><div><i [style.width.%]="completionPercent()"></i></div></div></div>
         <section class="learning-paths">
           @for (lesson of lessons; track lesson.slug; let index = $index) {
             <a class="lesson-card card" [routerLink]="['/learn', lesson.slug]"><div class="lesson-card-top"><span>{{ (index + 1).toString().padStart(2, '0') }}</span><b [class.complete]="progress.has(lesson.slug)">{{ progress.has(lesson.slug) ? 'UNDERSTOOD' : lesson.duration }}</b></div><p>{{ lesson.category }}</p><h2>{{ lesson.title }}</h2><small>{{ lesson.summary }}</small><strong>Start lesson →</strong></a>
           }
         </section>
-        <section class="glossary-section"><div><p class="eyebrow">QUICK REFERENCE</p><h2>Research glossary</h2></div><div class="glossary-grid">@for (term of glossary; track term[0]) { <article><strong>{{ term[0] }}</strong><p>{{ term[1] }}</p></article> }</div></section>
+        <section class="glossary-section"><div><p class="eyebrow">QUICK REFERENCE</p><h2>Research glossary</h2></div><div class="glossary-grid">@for (term of glossary; track term[0]) { <article><strong>{{ term[0] }} @if (tipFor(term[0]); as tip) { <app-info-tip [text]="tip" /> }</strong><p>{{ term[1] }}</p></article> }</div></section>
         <div class="learning-disclaimer notice">Education explains market concepts but cannot remove uncertainty or determine whether an investment is suitable for you.</div>
       }
     </main>`,
@@ -60,4 +61,17 @@ export class LearningCenterComponent implements OnInit {
   completionPercent(): number { return this.completedCount() / this.lessons.length * 100; }
   selectAnswer(index: number): void { this.selectedAnswer.set(index); this.quizRevealed.set(true); }
   complete(slug: string): void { this.progress.markComplete(slug); }
+  tipFor(term: string): string {
+    const tips: Record<string, string> = {
+      RSI: 'Shows whether recent price moves may be overbought or oversold.',
+      MACD: 'Shows if price momentum is speeding up or slowing down.',
+      EMA: 'Tracks price trends with extra weight on newer prices.',
+      SMA: 'Shows the average closing price across a fixed period.',
+      Volatility: 'How widely and quickly the stock price tends to move.',
+      Support: 'A recent price area where declines have often slowed.',
+      Resistance: 'A recent price area where advances have often slowed.',
+      Confidence: 'How strongly the model favors its estimate based on current inputs.',
+    };
+    return tips[term] ?? '';
+  }
 }
