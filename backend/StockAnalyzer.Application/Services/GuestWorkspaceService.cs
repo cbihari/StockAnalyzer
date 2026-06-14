@@ -10,16 +10,18 @@ public sealed class GuestWorkspaceService(IGuestWorkspaceRepository repository) 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public async Task<IReadOnlyList<WorkspaceWatchlistItemDto>> GetWatchlistAsync(
+        Guid? userId,
         string clientId,
         CancellationToken cancellationToken)
     {
-        var workspace = await repository.GetAsync(ValidateClientId(clientId), cancellationToken);
+        var workspace = await repository.GetAsync(userId, ValidateClientId(clientId), cancellationToken);
         return workspace is null
             ? []
             : JsonSerializer.Deserialize<IReadOnlyList<WorkspaceWatchlistItemDto>>(workspace.WatchlistJson, JsonOptions) ?? [];
     }
 
     public async Task<IReadOnlyList<WorkspaceWatchlistItemDto>> SaveWatchlistAsync(
+        Guid? userId,
         string clientId,
         IReadOnlyList<WorkspaceWatchlistItemDto> items,
         CancellationToken cancellationToken)
@@ -33,40 +35,43 @@ public sealed class GuestWorkspaceService(IGuestWorkspaceRepository repository) 
             .GroupBy(item => item.Ticker, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .ToArray();
-        await repository.SaveWatchlistAsync(ValidateClientId(clientId), JsonSerializer.Serialize(normalized, JsonOptions), cancellationToken);
+        await repository.SaveWatchlistAsync(userId, ValidateClientId(clientId), JsonSerializer.Serialize(normalized, JsonOptions), cancellationToken);
         return normalized;
     }
 
-    public async Task<WorkspaceAlertStateDto> GetAlertStateAsync(string clientId, CancellationToken cancellationToken)
+    public async Task<WorkspaceAlertStateDto> GetAlertStateAsync(Guid? userId, string clientId, CancellationToken cancellationToken)
     {
-        var workspace = await repository.GetAsync(ValidateClientId(clientId), cancellationToken);
+        var workspace = await repository.GetAsync(userId, ValidateClientId(clientId), cancellationToken);
         return workspace is null
             ? new WorkspaceAlertStateDto([], [])
             : JsonSerializer.Deserialize<WorkspaceAlertStateDto>(workspace.AlertStateJson, JsonOptions) ?? new WorkspaceAlertStateDto([], []);
     }
 
     public async Task<WorkspaceAlertStateDto> SaveAlertStateAsync(
+        Guid? userId,
         string clientId,
         WorkspaceAlertStateDto state,
         CancellationToken cancellationToken)
     {
         if (state.Rules.Count > 50 || state.Notifications.Count > 100)
             throw new ArgumentException("Guest alert storage limits were exceeded.", nameof(state));
-        await repository.SaveAlertStateAsync(ValidateClientId(clientId), JsonSerializer.Serialize(state, JsonOptions), cancellationToken);
+        await repository.SaveAlertStateAsync(userId, ValidateClientId(clientId), JsonSerializer.Serialize(state, JsonOptions), cancellationToken);
         return state;
     }
 
     public async Task<IReadOnlyList<PortfolioHoldingDto>> GetPortfolioAsync(
+        Guid? userId,
         string clientId,
         CancellationToken cancellationToken)
     {
-        var workspace = await repository.GetAsync(ValidateClientId(clientId), cancellationToken);
+        var workspace = await repository.GetAsync(userId, ValidateClientId(clientId), cancellationToken);
         return workspace is null
             ? []
             : JsonSerializer.Deserialize<IReadOnlyList<PortfolioHoldingDto>>(workspace.PortfolioJson, JsonOptions) ?? [];
     }
 
     public async Task<IReadOnlyList<PortfolioHoldingDto>> SavePortfolioAsync(
+        Guid? userId,
         string clientId,
         IReadOnlyList<PortfolioHoldingDto> holdings,
         CancellationToken cancellationToken)
@@ -90,11 +95,15 @@ public sealed class GuestWorkspaceService(IGuestWorkspaceRepository repository) 
         }).ToArray();
 
         await repository.SavePortfolioAsync(
+            userId,
             ValidateClientId(clientId),
             JsonSerializer.Serialize(normalized, JsonOptions),
             cancellationToken);
         return normalized;
     }
+
+    public Task ClaimAsync(Guid userId, string clientId, CancellationToken cancellationToken) =>
+        repository.ClaimAsync(userId, ValidateClientId(clientId), cancellationToken);
 
     private static string ValidateClientId(string clientId) =>
         Guid.TryParse(clientId, out var id) ? id.ToString() : throw new ArgumentException("X-Client-ID must be a valid UUID.", nameof(clientId));

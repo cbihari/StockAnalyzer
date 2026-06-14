@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<IModelMetricRepository, ModelMetricRepository>();
         services.AddScoped<IGuestWorkspaceRepository, GuestWorkspaceRepository>();
         services.AddScoped<IAiExplanationRepository, AiExplanationRepository>();
+        services.AddScoped<IAffiliateClickRepository, AffiliateClickRepository>();
         services.AddSingleton<IMarketDataProviderInfo, MarketDataProviderInfo>();
         services.AddHttpClient<IMlServiceClient, MlServiceClient>(client =>
         {

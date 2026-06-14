@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using StockAnalyzer.Api.Auth;
 using StockAnalyzer.Application.Abstractions;
 using StockAnalyzer.Application.DTOs;
 
@@ -15,5 +16,5 @@ public sealed class PortfolioController(IPortfolioService portfolioService) : Co
     public async Task<ActionResult<PortfolioSummaryDto>> GetSummary(
         [FromHeader(Name = "X-Client-ID")] string clientId,
         CancellationToken cancellationToken) =>
-        Ok(await portfolioService.GetSummaryAsync(clientId, cancellationToken));
+        Ok(await portfolioService.GetSummaryAsync(User.GetUserId(), clientId, cancellationToken));
 }

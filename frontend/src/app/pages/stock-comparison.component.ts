@@ -9,9 +9,10 @@ import { normalizeTicker, tickerValidationMessage } from '../core/ticker-validat
 import { ComparisonChartComponent } from '../shared/comparison-chart.component';
 import { TickerAutocompleteComponent } from '../shared/ticker-autocomplete.component';
 import { InfoTipComponent } from '../shared/info-tip.component';
+import { AffiliateNoteComponent } from '../shared/affiliate-note.component';
 
 @Component({
-  imports: [CommonModule, FormsModule, RouterLink, ComparisonChartComponent, TickerAutocompleteComponent, InfoTipComponent],
+  imports: [CommonModule, FormsModule, RouterLink, ComparisonChartComponent, TickerAutocompleteComponent, InfoTipComponent, AffiliateNoteComponent],
   template: `
     <main class="page compare-page">
       <p class="eyebrow">MULTI-STOCK RESEARCH</p><h1>Compare the evidence.</h1><p class="lead">Compare two or three stocks across price performance, directional estimates, risk, technical context, and measured model reliability.</p>
@@ -40,6 +41,7 @@ import { InfoTipComponent } from '../shared/info-tip.component';
         </section>
         <div class="notice warning">{{ data.disclaimer }}</div>
       }
+      <app-affiliate-note [ticker]="comparison() ? comparisonTickers(comparison()!) : tickerOne + ',' + tickerTwo" />
     </main>`,
 })
 export class StockComparisonComponent implements OnInit {
@@ -77,6 +79,7 @@ export class StockComparisonComponent implements OnInit {
 
   periodReturn(stock: StockAnalysis): number { const first = stock.history[0]?.close; const last = stock.history.at(-1)?.close; return first && last ? (last - first) / first : 0; }
   modelLabel(stock: StockAnalysis): string { return stock.prediction.model_status === 'rule_based_fallback' ? 'Rule fallback' : stock.prediction.model_status === 'newly_trained_model' ? 'New ML model' : 'Existing ML model'; }
+  comparisonTickers(data: StockComparison): string { return data.stocks.map((stock) => stock.ticker).join(','); }
 
   private validatedTickers(): string[] | null {
     this.validationError.set('');

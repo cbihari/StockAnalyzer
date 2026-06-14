@@ -1,8 +1,16 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using StockAnalyzer.Api.Auth;
 using StockAnalyzer.Api.Middleware;
 using StockAnalyzer.Application;
 using StockAnalyzer.Infrastructure;
 using StockAnalyzer.Infrastructure.Persistence;
+using StockAnalyzer.Infrastructure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +31,49 @@ builder.Services.AddSwaggerGen(options =>
 });
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddIdentityCore<StockAnalyzerUser>(options =>
+    {
+        options.User.RequireUniqueEmail = true;
+        options.Password.RequiredLength = 8;
+        options.Password.RequireNonAlphanumeric = false;
+    })
+    .AddRoles<IdentityRole<Guid>>()
+    .AddEntityFrameworkStores<StockAnalyzerDbContext>()
+    .AddSignInManager()
+    .AddDefaultTokenProviders();
+builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddHttpContextAccessor();
+var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
+    ?? builder.Configuration["Jwt:Secret"]
+    ?? (builder.Environment.IsDevelopment()
+        ? "local-development-only-change-this-jwt-secret"
+        : throw new InvalidOperationException("JWT_SECRET is required outside development."));
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "StockAnalyzer",
+        ValidAudience = builder.Configuration["Jwt:Audience"] ?? "StockAnalyzer.Web",
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+    })
+    .AddCookie(IdentityConstants.ExternalScheme)
+    .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+    {
+        options.SignInScheme = IdentityConstants.ExternalScheme;
+        options.ClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")
+            ?? builder.Configuration["Google:ClientId"]
+            ?? "placeholder-google-client-id";
+        options.ClientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET")
+            ?? builder.Configuration["Google:ClientSecret"]
+            ?? "placeholder-google-client-secret";
+    });
 var allowedOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")
         ?? builder.Configuration["FrontendUrl"]
         ?? "http://localhost:4200")
@@ -38,6 +89,10 @@ var app = builder.Build();
 
 await app.Services.MigrateDatabaseAsync();
 
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseSwagger();
@@ -45,6 +100,7 @@ app.UseSwaggerUI(options =>
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "StockAnalyzer API v1"));
 
 app.UseCors("Frontend");
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

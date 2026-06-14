@@ -3,6 +3,8 @@ namespace StockAnalyzer.Domain.Stocks;
 public sealed class Prediction
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid? UserId { get; set; }
+    public string? WorkspaceId { get; set; }
     public Guid StockId { get; set; }
     public required Stock Stock { get; set; }
     public required string Ticker { get; set; }

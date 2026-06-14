@@ -19,7 +19,7 @@ public sealed class GuestWorkspaceServiceTests
             new WorkspaceWatchlistItemDto(" aapl ", "invalid", "  Research note  ", [" Growth ", "growth", "Tech"])
         };
 
-        var saved = await service.SaveWatchlistAsync(clientId, items, default);
+        var saved = await service.SaveWatchlistAsync(null, clientId, items, default);
 
         Assert.Equal("AAPL", saved[0].Ticker);
         Assert.Equal("Research note", saved[0].Note);
@@ -31,7 +31,7 @@ public sealed class GuestWorkspaceServiceTests
     public async Task WorkspaceRejectsInvalidClientId()
     {
         var service = new GuestWorkspaceService(new FakeWorkspaceRepository());
-        await Assert.ThrowsAsync<ArgumentException>(() => service.GetWatchlistAsync("not-a-uuid", default));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.GetWatchlistAsync(null, "not-a-uuid", default));
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public sealed class GuestWorkspaceServiceTests
         var repository = new FakeWorkspaceRepository();
         var service = new GuestWorkspaceService(repository);
 
-        var saved = await service.SavePortfolioAsync(Guid.NewGuid().ToString(), [
+        var saved = await service.SavePortfolioAsync(null, Guid.NewGuid().ToString(), [
             new PortfolioHoldingDto("invalid", " aapl ", 1.23456789, 123.45678, "2026-06-01", "  Core holding  ")
         ], default);
 
@@ -55,7 +55,7 @@ public sealed class GuestWorkspaceServiceTests
     public async Task SavePortfolio_RejectsNonPositiveQuantity()
     {
         var service = new GuestWorkspaceService(new FakeWorkspaceRepository());
-        await Assert.ThrowsAsync<ArgumentException>(() => service.SavePortfolioAsync(Guid.NewGuid().ToString(), [
+        await Assert.ThrowsAsync<ArgumentException>(() => service.SavePortfolioAsync(null, Guid.NewGuid().ToString(), [
             new PortfolioHoldingDto(Guid.NewGuid().ToString(), "AAPL", 0, 100, null, "")
         ], default));
     }
@@ -64,27 +64,33 @@ public sealed class GuestWorkspaceServiceTests
     {
         public GuestWorkspace? Workspace { get; private set; }
 
-        public Task<GuestWorkspace?> GetAsync(string clientId, CancellationToken cancellationToken) =>
+        public Task<GuestWorkspace?> GetAsync(Guid? userId, string clientId, CancellationToken cancellationToken) =>
             Task.FromResult(Workspace);
 
-        public Task SaveWatchlistAsync(string clientId, string json, CancellationToken cancellationToken)
+        public Task SaveWatchlistAsync(Guid? userId, string clientId, string json, CancellationToken cancellationToken)
         {
-            Workspace ??= new GuestWorkspace { ClientId = clientId };
+            Workspace ??= new GuestWorkspace { ClientId = clientId, UserId = userId };
             Workspace.WatchlistJson = json;
             return Task.CompletedTask;
         }
 
-        public Task SaveAlertStateAsync(string clientId, string json, CancellationToken cancellationToken)
+        public Task SaveAlertStateAsync(Guid? userId, string clientId, string json, CancellationToken cancellationToken)
         {
-            Workspace ??= new GuestWorkspace { ClientId = clientId };
+            Workspace ??= new GuestWorkspace { ClientId = clientId, UserId = userId };
             Workspace.AlertStateJson = json;
             return Task.CompletedTask;
         }
 
-        public Task SavePortfolioAsync(string clientId, string json, CancellationToken cancellationToken)
+        public Task SavePortfolioAsync(Guid? userId, string clientId, string json, CancellationToken cancellationToken)
         {
-            Workspace ??= new GuestWorkspace { ClientId = clientId };
+            Workspace ??= new GuestWorkspace { ClientId = clientId, UserId = userId };
             Workspace.PortfolioJson = json;
+            return Task.CompletedTask;
+        }
+
+        public Task ClaimAsync(Guid userId, string clientId, CancellationToken cancellationToken)
+        {
+            if (Workspace?.ClientId == clientId) Workspace.UserId = userId;
             return Task.CompletedTask;
         }
     }

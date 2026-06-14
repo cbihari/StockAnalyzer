@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using StockAnalyzer.Domain.Stocks;
+using StockAnalyzer.Infrastructure.Identity;
 
 namespace StockAnalyzer.Infrastructure.Persistence.Configurations;
 
@@ -10,6 +11,9 @@ public sealed class PredictionConfiguration : IEntityTypeConfiguration<Predictio
     {
         builder.ToTable("Predictions");
         builder.HasKey(prediction => prediction.Id);
+        builder.Property(prediction => prediction.WorkspaceId).HasMaxLength(36);
+        builder.HasOne<StockAnalyzerUser>().WithMany().HasForeignKey(prediction => prediction.UserId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasIndex(prediction => new { prediction.UserId, prediction.WorkspaceId, prediction.CreatedAt });
         builder.Property(prediction => prediction.StockId).HasColumnName("stock_id");
         builder.Property(prediction => prediction.Ticker)
             .HasColumnName("ticker").HasMaxLength(20).IsRequired();

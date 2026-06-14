@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using StockAnalyzer.Application.Abstractions;
 using StockAnalyzer.Application.DTOs;
@@ -5,10 +7,16 @@ using StockAnalyzer.Domain.Stocks;
 
 namespace StockAnalyzer.Infrastructure.Persistence.Repositories;
 
-public sealed class PredictionRepository(StockAnalyzerDbContext dbContext) : IPredictionRepository
+public sealed class PredictionRepository(
+    StockAnalyzerDbContext dbContext,
+    IHttpContextAccessor httpContextAccessor) : IPredictionRepository
 {
     public async Task AddAsync(Prediction prediction, CancellationToken cancellationToken)
     {
+        var context = httpContextAccessor.HttpContext;
+        if (Guid.TryParse(context?.User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+            prediction.UserId = userId;
+        prediction.WorkspaceId = context?.Request.Headers["X-Client-ID"].FirstOrDefault();
         dbContext.Predictions.Add(prediction);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
@@ -24,12 +32,16 @@ public sealed class PredictionRepository(StockAnalyzerDbContext dbContext) : IPr
         dbContext.SaveChangesAsync(cancellationToken);
 
     public async Task<IReadOnlyList<Prediction>> GetHistoryAsync(
+        Guid? userId,
+        string workspaceId,
         string? ticker,
         string outcome,
         int limit,
         CancellationToken cancellationToken)
     {
-        var query = dbContext.Predictions.AsNoTracking();
+        var query = dbContext.Predictions.AsNoTracking().Where(prediction => userId.HasValue
+            ? prediction.UserId == userId
+            : prediction.UserId == null && prediction.WorkspaceId == workspaceId);
         if (!string.IsNullOrWhiteSpace(ticker))
         {
             var normalizedTicker = ticker.Trim().ToUpperInvariant();

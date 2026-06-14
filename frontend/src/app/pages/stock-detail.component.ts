@@ -9,11 +9,12 @@ import { StockApiService } from '../core/stock-api.service';
 import { PriceChartComponent } from '../shared/price-chart.component';
 import { TickerAutocompleteComponent } from '../shared/ticker-autocomplete.component';
 import { InfoTipComponent } from '../shared/info-tip.component';
+import { AffiliateNoteComponent } from '../shared/affiliate-note.component';
 import { normalizeTicker, tickerValidationMessage } from '../core/ticker-validation';
 import { WatchlistService } from '../core/watchlist.service';
 
 @Component({
-  imports: [CommonModule, FormsModule, RouterLink, PriceChartComponent, TickerAutocompleteComponent, InfoTipComponent],
+  imports: [CommonModule, FormsModule, RouterLink, PriceChartComponent, TickerAutocompleteComponent, InfoTipComponent, AffiliateNoteComponent],
   template: `
     <main class="page">
       <form class="top-search" (ngSubmit)="search()" novalidate><app-ticker-autocomplete inputId="detail-ticker" ariaLabel="Ticker" [(value)]="ticker" (valueChange)="validationError.set('')" (submitted)="search()" /><button type="submit" [disabled]="loading() || retraining()">{{ loading() ? 'Analyzing...' : 'Analyze' }}</button></form>
@@ -111,6 +112,7 @@ import { WatchlistService } from '../core/watchlist.service';
           </section>
         }
       }
+      <app-affiliate-note [ticker]="prediction()?.ticker ?? ticker" />
     </main>`,
 })
 export class StockDetailComponent implements OnInit, OnDestroy {

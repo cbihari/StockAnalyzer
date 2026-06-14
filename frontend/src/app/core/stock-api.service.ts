@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { AiExplanationResponse, AiResearchResponse, HistoricalPrice, IndicatorResponse, MarketOverview, MlPrediction, ModelTrainingJob, ModelTrainingResult, ModelVersionsResponse, PortfolioHolding, PortfolioSummary, PredictionEvaluationResult, PredictionHistoryResponse, StockAnalysis, StockComparison, StockNews, StockQuotesResponse, StockSuggestion, TickerModelMetrics, WorkspaceAlertState, WorkspaceWatchlistItem } from './models';
+import { AffiliateClickStat, AffiliatePartner, AiExplanationResponse, AiResearchResponse, HistoricalPrice, IndicatorResponse, MarketOverview, MlPrediction, ModelTrainingJob, ModelTrainingResult, ModelVersionsResponse, PortfolioHolding, PortfolioSummary, PredictionEvaluationResult, PredictionHistoryResponse, StockAnalysis, StockComparison, StockNews, StockQuotesResponse, StockSuggestion, TickerModelMetrics, WorkspaceAlertState, WorkspaceWatchlistItem } from './models';
 import { ClientIdentityService } from './client-identity.service';
 
 @Injectable({ providedIn: 'root' })
@@ -154,6 +154,22 @@ export class StockApiService {
 
   getPortfolioSummary(): Observable<PortfolioSummary> {
     return this.http.get<PortfolioSummary>(`${this.baseUrl}/api/portfolio/summary`, { headers: this.workspaceHeaders() });
+  }
+
+  getAffiliatePartners(): Observable<AffiliatePartner[]> {
+    return this.http.get<AffiliatePartner[]>(`${this.baseUrl}/api/affiliate/partners`);
+  }
+
+  trackAffiliateClick(broker: string, ticker = ''): Observable<void> {
+    return this.http.post<void>(
+      `${this.baseUrl}/api/affiliate/click`,
+      { broker, ticker: ticker || null },
+      { headers: this.workspaceHeaders() },
+    );
+  }
+
+  getAffiliateStats(): Observable<AffiliateClickStat[]> {
+    return this.http.get<AffiliateClickStat[]>(`${this.baseUrl}/api/affiliate/stats`);
   }
 
   private workspaceHeaders(): Record<string, string> { return { 'X-Client-ID': this.identity.id }; }
