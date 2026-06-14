@@ -15,8 +15,12 @@ namespace StockAnalyzer.Api.Controllers;
 public sealed class AuthController(
     UserManager<StockAnalyzerUser> userManager,
     JwtTokenService tokenService,
+    AuthProviderOptions authProviders,
     IConfiguration configuration) : ControllerBase
 {
+    [HttpGet("config")]
+    public ActionResult<AuthConfigDto> Config() => Ok(new AuthConfigDto(authProviders.GoogleEnabled));
+
     [HttpPost("signup")]
     public async Task<ActionResult<AuthResponseDto>> Signup(SignupRequestDto request)
     {
@@ -48,9 +52,18 @@ public sealed class AuthController(
     }
 
     [HttpGet("google")]
-    public IActionResult Google() => Challenge(
-        new AuthenticationProperties { RedirectUri = Url.Action(nameof(GoogleCallback)) },
-        GoogleDefaults.AuthenticationScheme);
+    public IActionResult Google()
+    {
+        if (!authProviders.GoogleEnabled)
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new ProblemDetails
+            {
+                Detail = "Google sign-in is not configured yet. Use email and password instead."
+            });
+
+        return Challenge(
+            new AuthenticationProperties { RedirectUri = Url.Action(nameof(GoogleCallback)) },
+            GoogleDefaults.AuthenticationScheme);
+    }
 
     [HttpGet("google/callback")]
     public async Task<IActionResult> GoogleCallback()

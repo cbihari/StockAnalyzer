@@ -51,7 +51,7 @@ import { WatchlistService } from '../core/watchlist.service';
           <button type="button" class="secondary-button compare-button" (click)="openComparison()">Compare</button>
           <button type="button" class="secondary-button retrain-button" [disabled]="retraining()" (click)="retrainModel()">{{ retraining() ? 'Retraining...' : 'Retrain Model' }}</button>
         </div>
-        @if (retraining()) { <div class="training-progress" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span> Training model with the latest 5 years of data. This may take a moment...</div> }
+        @if (retraining()) { <div class="training-progress" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span> Training model with {{ periodLabel() === 'Full' ? 'all available data' : periodLabel() + ' of data' }}. This may take a moment...</div> }
         @if (retrainSuccess()) { <div class="success-message" role="status">{{ retrainSuccess() }}</div> }
         @if (retrainError()) { <div class="error-message" role="alert">{{ retrainError() }}</div> }
         @if (analysis(); as research) {
@@ -119,7 +119,7 @@ export class StockDetailComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute); private readonly router = inject(Router); private readonly api = inject(StockApiService); private readonly historyStore = inject(PredictionHistoryService);
   readonly watchlist = inject(WatchlistService);
   private trainingMessageTimer: ReturnType<typeof setTimeout> | undefined;
-  readonly periods = [{ value: '3mo', label: '3M' }, { value: '6mo', label: '6M' }, { value: '1y', label: '1Y' }, { value: '2y', label: '2Y' }, { value: '5y', label: '5Y' }] as const;
+  readonly periods = [{ value: '3mo', label: '3M' }, { value: '6mo', label: '6M' }, { value: '1y', label: '1Y' }, { value: '2y', label: '2Y' }, { value: '5y', label: '5Y' }, { value: 'max', label: 'Full' }] as const;
   ticker = 'RELIANCE.NS'; readonly period = signal('1y'); readonly loading = signal(false); readonly retraining = signal(false); readonly retrainSuccess = signal(''); readonly retrainError = signal(''); readonly loadingMessage = signal('Checking model for this stock...'); readonly error = signal(''); readonly validationError = signal(''); readonly analysis = signal<StockAnalysis | null>(null); readonly history = signal<StockAnalysis['history']>([]); readonly indicators = signal<StockAnalysis['indicators'] | null>(null); readonly prediction = signal<MlPrediction | null>(null); readonly news = signal<StockNews | null>(null); readonly newsLoading = signal(false); readonly newsError = signal(''); readonly aiExplanation = signal<AiExplanationResponse | null>(null); readonly aiLoading = signal(false); readonly aiError = signal('');
   ngOnInit(): void { this.route.paramMap.subscribe((params) => { this.ticker = params.get('ticker') ?? 'RELIANCE.NS'; this.aiExplanation.set(null); this.aiError.set(''); this.load(); this.loadNews(); }); }
   ngOnDestroy(): void { this.clearTrainingMessageTimer(); }
@@ -162,7 +162,7 @@ export class StockDetailComponent implements OnInit, OnDestroy {
   retrainModel(): void {
     if (this.retraining()) return;
     this.retraining.set(true); this.retrainSuccess.set(''); this.retrainError.set('');
-    this.api.retrainModel(this.ticker).pipe(
+    this.api.retrainModel(this.ticker, this.period()).pipe(
       switchMap((training) => this.api.getStockAnalysis(this.ticker, this.period()).pipe(
         map((analysis) => ({ training, analysis })),
       )),

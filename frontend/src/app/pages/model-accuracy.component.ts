@@ -39,7 +39,7 @@ import { InfoTipComponent } from '../shared/info-tip.component';
       @if (metrics(); as model) {
         <div class="model-heading">
           <div><span class="badge model-badge">{{ model.model_status === 'trained' ? 'Trained Model' : model.model_status }}</span><h2>{{ model.ticker }}</h2><p class="muted">{{ model.model_name }}</p></div>
-          <div class="model-actions"><button class="secondary-button" type="button" (click)="startRetraining()" [disabled]="training()">{{ training() ? 'Training in background...' : 'Retrain in background' }}</button><div class="trained-date"><span>Active model trained</span><strong>{{ model.trained_at | date:'medium' }}</strong></div></div>
+          <div class="model-actions"><label>Training history<select name="trainingPeriod" [(ngModel)]="trainingPeriod" [disabled]="training()"><option value="1y">1 year</option><option value="2y">2 years</option><option value="5y">5 years</option><option value="max">Full history</option></select></label><button class="secondary-button" type="button" (click)="startRetraining()" [disabled]="training()">{{ training() ? 'Training in background...' : 'Retrain in background' }}</button><div class="trained-date"><span>Active model trained</span><strong>{{ model.trained_at | date:'medium' }}</strong></div></div>
         </div>
         <section class="metric-grid accuracy-metrics">
           <article class="card"><span>Model accuracy <app-info-tip text="Share of historical test predictions the model got right." /></span><strong>{{ model.accuracy | percent:'1.0-1' }}</strong><p>Overall correct predictions</p></article>
@@ -70,6 +70,7 @@ import { InfoTipComponent } from '../shared/info-tip.component';
 export class ModelAccuracyComponent implements OnInit, OnDestroy {
   private readonly api = inject(StockApiService);
   ticker = 'RELIANCE.NS';
+  trainingPeriod = '5y';
   readonly loading = signal(false);
   readonly error = signal('');
   readonly validationError = signal('');
@@ -98,7 +99,7 @@ export class ModelAccuracyComponent implements OnInit, OnDestroy {
     if (this.validationError()) return;
     this.ticker = normalizeTicker(this.ticker);
     this.training.set(true); this.error.set(''); this.message.set('');
-    this.api.startTrainingJob(this.ticker).subscribe({
+    this.api.startTrainingJob(this.ticker, this.trainingPeriod).subscribe({
       next: (job) => { this.job.set(job); this.pollJob(job.job_id); },
       error: (error) => { this.training.set(false); this.error.set(error.error?.detail ?? 'Training could not be started.'); },
     });

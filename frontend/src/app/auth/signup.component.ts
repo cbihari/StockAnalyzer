@@ -19,12 +19,13 @@ export class SignupComponent {
   readonly loading = signal(false);
   readonly error = signal('');
   readonly googleUrl = this.auth.googleUrl;
+  readonly googleEnabled = this.auth.googleEnabled;
 
   submit(): void {
     this.loading.set(true); this.error.set('');
     this.auth.signup(this.email, this.password, this.displayName).pipe(finalize(() => this.loading.set(false))).subscribe({
       next: () => this.router.navigateByUrl('/'),
-      error: (error) => this.error.set(error.error?.detail ?? 'Account creation could not be completed.'),
+      error: (error) => this.error.set(this.auth.errorMessage(error, 'Account creation could not be completed.')),
     });
   }
 }
