@@ -18,12 +18,13 @@ export class LoginComponent {
   readonly loading = signal(false);
   readonly error = signal('');
   readonly googleUrl = this.auth.googleUrl;
+  readonly googleEnabled = this.auth.googleEnabled;
 
   submit(): void {
     this.loading.set(true); this.error.set('');
     this.auth.login(this.email, this.password).pipe(finalize(() => this.loading.set(false))).subscribe({
       next: () => this.router.navigateByUrl('/'),
-      error: (error) => this.error.set(error.error?.detail ?? 'Login could not be completed.'),
+      error: (error) => this.error.set(this.auth.errorMessage(error, 'Login could not be completed.')),
     });
   }
 }

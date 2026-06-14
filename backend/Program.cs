@@ -48,7 +48,13 @@ var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
     ?? (builder.Environment.IsDevelopment()
         ? "local-development-only-change-this-jwt-secret"
         : throw new InvalidOperationException("JWT_SECRET is required outside development."));
-builder.Services.AddAuthentication(options =>
+var googleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")
+    ?? builder.Configuration["Google:ClientId"];
+var googleClientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET")
+    ?? builder.Configuration["Google:ClientSecret"];
+var googleEnabled = IsConfiguredSecret(googleClientId) && IsConfiguredSecret(googleClientSecret);
+builder.Services.AddSingleton(new AuthProviderOptions(googleEnabled));
+var authentication = builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
         options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -63,17 +69,16 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["Jwt:Audience"] ?? "StockAnalyzer.Web",
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
     })
-    .AddCookie(IdentityConstants.ExternalScheme)
-    .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+    .AddCookie(IdentityConstants.ExternalScheme);
+if (googleEnabled)
+{
+    authentication.AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
     {
         options.SignInScheme = IdentityConstants.ExternalScheme;
-        options.ClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")
-            ?? builder.Configuration["Google:ClientId"]
-            ?? "placeholder-google-client-id";
-        options.ClientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET")
-            ?? builder.Configuration["Google:ClientSecret"]
-            ?? "placeholder-google-client-secret";
+        options.ClientId = googleClientId!;
+        options.ClientSecret = googleClientSecret!;
     });
+}
 var allowedOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")
         ?? builder.Configuration["FrontendUrl"]
         ?? "http://localhost:4200")
@@ -106,3 +111,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+static bool IsConfiguredSecret(string? value) =>
+    !string.IsNullOrWhiteSpace(value) && !value.StartsWith("placeholder-", StringComparison.OrdinalIgnoreCase);

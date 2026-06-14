@@ -1,6 +1,8 @@
 services:
   - type: web
     name: stockanalyzer-ml
+    branch: main
+    autoDeployTrigger: commit
     runtime: docker
     plan: starter
     dockerfilePath: ./ml-service/Dockerfile
@@ -22,6 +24,8 @@ services:
 
   - type: web
     name: stockanalyzer-api
+    branch: main
+    autoDeployTrigger: commit
     runtime: docker
     plan: starter
     dockerfilePath: ./backend/Dockerfile
@@ -33,6 +37,14 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: ALLOWED_ORIGINS
+        value: https://frontend-shiv-sharma-stockanalyzer.vercel.app,https://frontend-five-khaki-72.vercel.app
+      - key: FRONTEND_URL
+        value: https://frontend-shiv-sharma-stockanalyzer.vercel.app
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: ML_SERVICE_URL
         fromService:

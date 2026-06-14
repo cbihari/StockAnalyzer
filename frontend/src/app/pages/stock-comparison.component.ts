@@ -20,7 +20,7 @@ import { AffiliateNoteComponent } from '../shared/affiliate-note.component';
         <label>Stock 1<app-ticker-autocomplete inputId="compare-one" ariaLabel="First stock" [(value)]="tickerOne" /></label>
         <label>Stock 2<app-ticker-autocomplete inputId="compare-two" ariaLabel="Second stock" [(value)]="tickerTwo" /></label>
         <label>Stock 3 · optional<app-ticker-autocomplete inputId="compare-three" ariaLabel="Third stock optional" [(value)]="tickerThree" /></label>
-        <label>Period<select name="period" [(ngModel)]="period"><option value="3mo">3 months</option><option value="6mo">6 months</option><option value="1y">1 year</option><option value="2y">2 years</option><option value="5y">5 years</option></select></label>
+        <label>Period<select name="period" [(ngModel)]="period"><option value="3mo">3 months</option><option value="6mo">6 months</option><option value="1y">1 year</option><option value="2y">2 years</option><option value="5y">5 years</option><option value="max">Full history</option></select></label>
         <button type="submit" [disabled]="loading()">{{ loading() ? 'Comparing...' : 'Compare stocks' }}</button>
       </form>
       @if (validationError()) { <div class="error card" role="alert">{{ validationError() }}</div> }

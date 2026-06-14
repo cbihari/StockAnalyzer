@@ -10,7 +10,9 @@
       @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
       <button class="primary" type="submit" [disabled]="loading()">{{ loading() ? 'Creating account...' : 'Sign up' }}</button>
     </form>
-    <a class="google-button" [href]="googleUrl">Continue with Google</a>
+    @if (googleEnabled()) {
+      <a class="google-button" [href]="googleUrl">Continue with Google</a>
+    }
     <p class="auth-switch">Already have an account? <a routerLink="/login">Log in</a></p>
   </section>
 </main>
