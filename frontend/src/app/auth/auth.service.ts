@@ -16,7 +16,7 @@ export class AuthService {
   readonly currentUser = signal<AuthUser | null>(null);
   readonly authenticated = computed(() => !!this.currentUser());
   readonly googleEnabled = signal(false);
-  readonly googleUrl = `${this.baseUrl}/api/auth/google`;
+  readonly googleUrl = `${environment.authUrl}/api/auth/google`;
 
   constructor() {
     this.loadConfig();
