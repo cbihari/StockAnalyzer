@@ -40,8 +40,8 @@ import { AffiliateNoteComponent } from '../shared/affiliate-note.component';
           }
         </section>
         <div class="notice warning">{{ data.disclaimer }}</div>
-        <app-affiliate-note [ticker]="comparisonTickers(data)" />
       }
+      <app-affiliate-note [ticker]="comparison() ? comparisonTickers(comparison()!) : tickerOne + ',' + tickerTwo" />
     </main>`,
 })
 export class StockComparisonComponent implements OnInit {

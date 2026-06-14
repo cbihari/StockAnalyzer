@@ -99,7 +99,6 @@ import { WatchlistService } from '../core/watchlist.service';
               <div class="ai-footer"><small>{{ ai.explanation.disclaimer }}</small><button type="button" class="secondary-button" [disabled]="aiLoading()" (click)="generateAiExplanation(true)">Regenerate</button></div>
             }
           </section>
-          <app-affiliate-note [ticker]="result.ticker" />
         }
         <section class="content-grid">
           <article class="card chart-card"><div class="section-title"><h2>Closing price</h2><span>{{ periodLabel() }}</span></div><app-price-chart [prices]="history()" /></article>
@@ -113,6 +112,7 @@ import { WatchlistService } from '../core/watchlist.service';
           </section>
         }
       }
+      <app-affiliate-note [ticker]="prediction()?.ticker ?? ticker" />
     </main>`,
 })
 export class StockDetailComponent implements OnInit, OnDestroy {

@@ -27,7 +27,6 @@
     <header>
       <span class="status-dot"></span>
       <span>Research systems online</span>
-      <a class="notification-link" routerLink="/notifications" aria-label="Open notifications">Alerts @if (alerts.unreadCount()) { <b>{{ alerts.unreadCount() }}</b> }</a>
       <div class="auth-nav">
         @if (auth.currentUser(); as user) {
           <span>{{ user.displayName }}</span><button type="button" (click)="logout()">Log out</button>
@@ -35,6 +34,7 @@
           <a routerLink="/login">Log in</a><a class="signup-link" routerLink="/signup">Sign up</a>
         }
       </div>
+      <a class="notification-link" routerLink="/notifications" aria-label="Open notifications">Alerts @if (alerts.unreadCount()) { <b>{{ alerts.unreadCount() }}</b> }</a>
     </header>
     <router-outlet />
   </div>
