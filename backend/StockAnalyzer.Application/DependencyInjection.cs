@@ -15,6 +15,7 @@ public static class DependencyInjection
         services.AddScoped<IPortfolioService, PortfolioService>();
         services.AddScoped<IAiExplanationService, AiExplanationService>();
         services.AddScoped<IAiResearchService, AiResearchService>();
+        services.AddScoped<IMonetizationService, MonetizationService>();
         return services;
     }
 }

@@ -429,3 +429,55 @@ export interface AuthResponse {
 export interface AuthConfig {
   googleEnabled: boolean;
 }
+
+export interface PlanLimit {
+  featureKey: string;
+  label: string;
+  dailyLimit: number | null;
+  storedLimit: number | null;
+  unit: string;
+}
+
+export interface SubscriptionPlan {
+  key: 'free' | 'pro' | 'power';
+  name: string;
+  description: string;
+  priceLabel: string;
+  limits: PlanLimit[];
+}
+
+export interface UsageFeature {
+  featureKey: string;
+  label: string;
+  usedToday: number;
+  dailyLimit: number | null;
+  remainingToday: number | null;
+  storedLimit: number | null;
+  allowed: boolean;
+  unit: string;
+}
+
+export interface SubscriptionState {
+  plan: 'free' | 'pro' | 'power';
+  status: 'pending' | 'active' | 'past_due' | 'canceled';
+  provider: string;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+}
+
+export interface MonetizationStatus {
+  plan: 'free' | 'pro' | 'power';
+  authenticated: boolean;
+  subscription: SubscriptionState | null;
+  plans: SubscriptionPlan[];
+  usage: UsageFeature[];
+}
+
+export interface CheckoutResponse {
+  planKey: 'pro' | 'power';
+  status: 'pending' | 'active' | 'past_due' | 'canceled';
+  provider: string;
+  checkoutUrl: string;
+  providerSessionId: string;
+  message: string;
+}

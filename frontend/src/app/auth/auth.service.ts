@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, catchError, of, tap } from 'rxjs';
+import { Observable, catchError, of, tap, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthConfig, AuthResponse, AuthUser } from '../core/models';
 import { ClientIdentityService } from '../core/client-identity.service';
@@ -33,9 +33,15 @@ export class AuthService {
       .pipe(tap((response) => this.setSession(response)));
   }
 
-  acceptToken(token: string): void {
+  acceptToken(token: string): Observable<AuthUser> {
     this.storeToken(token);
-    this.refreshCurrentUser();
+    return this.getCurrentUser().pipe(
+      tap((user) => this.currentUser.set(user)),
+      catchError((error) => {
+        this.logout();
+        return throwError(() => error);
+      }),
+    );
   }
 
   getCurrentUser(): Observable<AuthUser> {

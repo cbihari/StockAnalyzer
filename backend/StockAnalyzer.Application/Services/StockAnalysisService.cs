@@ -96,11 +96,12 @@ public sealed class StockAnalysisService(
         CancellationToken cancellationToken)
     {
         var normalizedTicker = StockTicker.Create(ticker).Value;
-        var history = await GetHistoryAsync(normalizedTicker, period, cancellationToken);
         var indicators = await GetIndicatorsAsync(normalizedTicker, period, cancellationToken);
-        var prediction = await GetMlPredictionAsync(normalizedTicker, cancellationToken);
+        var history = indicators.Data.Select(ToHistoricalPrice).ToArray();
+        await PersistHistoryAsync(normalizedTicker, history, cancellationToken);
+        var prediction = await GetMlPredictionPreviewAsync(normalizedTicker, cancellationToken);
 
-        if (history.Count < 2)
+        if (history.Length < 2)
         {
             throw new ArgumentException("At least two price rows are required for analysis.", nameof(ticker));
         }
@@ -158,6 +159,15 @@ public sealed class StockAnalysisService(
     {
         var normalizedTicker = StockTicker.Create(ticker).Value;
         var history = await mlServiceClient.GetHistoryAsync(normalizedTicker, period, cancellationToken);
+        await PersistHistoryAsync(normalizedTicker, history, cancellationToken);
+        return history;
+    }
+
+    private async Task PersistHistoryAsync(
+        string normalizedTicker,
+        IReadOnlyList<HistoricalPriceDto> history,
+        CancellationToken cancellationToken)
+    {
         var stock = await stockRepository.GetOrCreateAsync(normalizedTicker, cancellationToken);
         var prices = history.Select(price => new StockPrice
         {
@@ -171,8 +181,10 @@ public sealed class StockAnalysisService(
             Volume = price.Volume
         }).ToArray();
         await stockPriceRepository.UpsertRangeAsync(stock, prices, cancellationToken);
-        return history;
     }
+
+    private static HistoricalPriceDto ToHistoricalPrice(IndicatorRowDto row) =>
+        new(row.Date, row.Open, row.High, row.Low, row.Close, row.Volume);
 
     public Task<IndicatorResponseDto> GetIndicatorsAsync(
         string ticker,
@@ -204,7 +216,7 @@ public sealed class StockAnalysisService(
         CancellationToken cancellationToken)
     {
         var normalizedTicker = StockTicker.Create(ticker).Value;
-        var result = await mlServiceClient.GetMlPredictionAsync(normalizedTicker, cancellationToken);
+        var result = await GetMlPredictionPreviewAsync(normalizedTicker, cancellationToken);
         var stock = await stockRepository.GetOrCreateAsync(normalizedTicker, cancellationToken);
         await predictionRepository.AddAsync(new Prediction
         {
@@ -221,6 +233,11 @@ public sealed class StockAnalysisService(
         }, cancellationToken);
         return result;
     }
+
+    public Task<MlPredictionDto> GetMlPredictionPreviewAsync(
+        string ticker,
+        CancellationToken cancellationToken) =>
+        mlServiceClient.GetMlPredictionAsync(StockTicker.Create(ticker).Value, cancellationToken);
 
     public async Task<ModelTrainingDto> TrainModelAsync(
         string ticker,

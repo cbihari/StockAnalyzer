@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Text;
 using StockAnalyzer.Api.Auth;
 using StockAnalyzer.Application.Abstractions;
 using StockAnalyzer.Application.DTOs;
@@ -58,6 +59,31 @@ public sealed class PredictionsController(
             limit,
             cancellationToken));
 
+    /// <summary>Exports the persisted prediction audit trail as CSV when the current plan has export quota.</summary>
+    [HttpGet("history/export")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(FileContentResult))]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status402PaymentRequired)]
+    public async Task<IActionResult> ExportHistoryCsv(
+        [FromHeader(Name = "X-Client-ID")] string workspaceId,
+        [FromQuery] string? ticker = null,
+        [FromQuery] string outcome = "all",
+        [FromQuery] int limit = 500,
+        CancellationToken cancellationToken = default)
+    {
+        var export = await predictionEvaluationService.ExportHistoryCsvAsync(
+            User.GetUserId(),
+            workspaceId,
+            ticker,
+            outcome,
+            limit,
+            cancellationToken);
+        return File(
+            Encoding.UTF8.GetBytes(export.Content),
+            export.ContentType,
+            export.FileName);
+    }
+
     /// <summary>Explains an ML prediction using deterministic technical-indicator rules.</summary>
     [HttpGet("explain/{ticker}")]
     [ProducesResponseType<PredictionExplanationDto>(StatusCodes.Status200OK)]
@@ -71,10 +97,17 @@ public sealed class PredictionsController(
     [HttpPost("explain-ai/{ticker}")]
     [ProducesResponseType<AiExplanationResponseDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status402PaymentRequired)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status504GatewayTimeout)]
     public async Task<ActionResult<AiExplanationResponseDto>> ExplainAi(
         string ticker,
+        [FromHeader(Name = "X-Client-ID")] string clientId,
         [FromQuery] bool forceRefresh = false,
         CancellationToken cancellationToken = default) =>
-        Ok(await aiExplanationService.ExplainAsync(ticker, forceRefresh, cancellationToken));
+        Ok(await aiExplanationService.ExplainAsync(
+            ticker,
+            forceRefresh,
+            User.GetUserId(),
+            clientId,
+            cancellationToken));
 }

@@ -88,7 +88,14 @@ import { WatchlistService } from '../core/watchlist.service';
               <div class="ai-generate-state"><p>AI explanations may contain errors. Review the underlying data and indicators.</p><button type="button" (click)="generateAiExplanation(false)">Generate AI Explanation</button></div>
             }
             @if (aiLoading()) { <div class="ai-skeleton" role="status" aria-live="polite"><span></span><span></span><span></span><p>Generating a grounded explanation from the current analysis...</p></div> }
-            @if (aiError()) { <div class="error-message" role="alert">{{ aiError() }} <button type="button" class="secondary-button" (click)="generateAiExplanation(false)">Try again</button></div> }
+            @if (aiQuotaExceeded()) {
+              <div class="ai-upgrade-callout" role="alert">
+                <div><strong>AI explanation limit reached</strong><p>{{ aiError() }}</p></div>
+                <a routerLink="/upgrade" class="secondary-button">View plans</a>
+              </div>
+            } @else if (aiError()) {
+              <div class="error-message" role="alert">{{ aiError() }} <button type="button" class="secondary-button" (click)="generateAiExplanation(false)">Try again</button></div>
+            }
             @if (aiExplanation(); as ai) {
               <div class="ai-overview"><div><span>Prediction confidence <app-info-tip text="How strongly the model favors its estimate based on current inputs." /></span><strong>{{ ai.explanation.prediction }} · {{ ai.explanation.confidence }}%</strong></div><div><span>Risk level <app-info-tip text="Overall uncertainty based on volatility, signal agreement, and data quality." /></span><strong [class.negative]="ai.explanation.risk_level === 'HIGH'">{{ ai.explanation.risk_level }}</strong></div><div><span>Generated</span><strong>{{ ai.generatedAt | date:'short' }}</strong></div></div>
               <p class="ai-summary">{{ ai.explanation.summary }}</p>
@@ -120,8 +127,8 @@ export class StockDetailComponent implements OnInit, OnDestroy {
   readonly watchlist = inject(WatchlistService);
   private trainingMessageTimer: ReturnType<typeof setTimeout> | undefined;
   readonly periods = [{ value: '3mo', label: '3M' }, { value: '6mo', label: '6M' }, { value: '1y', label: '1Y' }, { value: '2y', label: '2Y' }, { value: '5y', label: '5Y' }, { value: 'max', label: 'Full' }] as const;
-  ticker = 'RELIANCE.NS'; readonly period = signal('1y'); readonly loading = signal(false); readonly retraining = signal(false); readonly retrainSuccess = signal(''); readonly retrainError = signal(''); readonly loadingMessage = signal('Checking model for this stock...'); readonly error = signal(''); readonly validationError = signal(''); readonly analysis = signal<StockAnalysis | null>(null); readonly history = signal<StockAnalysis['history']>([]); readonly indicators = signal<StockAnalysis['indicators'] | null>(null); readonly prediction = signal<MlPrediction | null>(null); readonly news = signal<StockNews | null>(null); readonly newsLoading = signal(false); readonly newsError = signal(''); readonly aiExplanation = signal<AiExplanationResponse | null>(null); readonly aiLoading = signal(false); readonly aiError = signal('');
-  ngOnInit(): void { this.route.paramMap.subscribe((params) => { this.ticker = params.get('ticker') ?? 'RELIANCE.NS'; this.aiExplanation.set(null); this.aiError.set(''); this.load(); this.loadNews(); }); }
+  ticker = 'RELIANCE.NS'; readonly period = signal('1y'); readonly loading = signal(false); readonly retraining = signal(false); readonly retrainSuccess = signal(''); readonly retrainError = signal(''); readonly loadingMessage = signal('Checking model for this stock...'); readonly error = signal(''); readonly validationError = signal(''); readonly analysis = signal<StockAnalysis | null>(null); readonly history = signal<StockAnalysis['history']>([]); readonly indicators = signal<StockAnalysis['indicators'] | null>(null); readonly prediction = signal<MlPrediction | null>(null); readonly news = signal<StockNews | null>(null); readonly newsLoading = signal(false); readonly newsError = signal(''); readonly aiExplanation = signal<AiExplanationResponse | null>(null); readonly aiLoading = signal(false); readonly aiError = signal(''); readonly aiQuotaExceeded = signal(false);
+  ngOnInit(): void { this.route.paramMap.subscribe((params) => { this.ticker = params.get('ticker') ?? 'RELIANCE.NS'; this.aiExplanation.set(null); this.aiError.set(''); this.aiQuotaExceeded.set(false); this.load(); this.loadNews(); }); }
   ngOnDestroy(): void { this.clearTrainingMessageTimer(); }
   search(): void { this.validationError.set(tickerValidationMessage(this.ticker)); if (!this.validationError()) this.router.navigate(['/stocks', normalizeTicker(this.ticker)]); }
   load(): void {
@@ -153,10 +160,13 @@ export class StockDetailComponent implements OnInit, OnDestroy {
   toggleWatchlist(ticker: string): void { this.watchlist.toggle(ticker); }
   generateAiExplanation(forceRefresh: boolean): void {
     if (this.aiLoading()) return;
-    this.aiLoading.set(true); this.aiError.set('');
+    this.aiLoading.set(true); this.aiError.set(''); this.aiQuotaExceeded.set(false);
     this.api.generateAiExplanation(this.ticker, forceRefresh).pipe(finalize(() => this.aiLoading.set(false))).subscribe({
-      next: (explanation) => this.aiExplanation.set(explanation),
-      error: (error) => this.aiError.set(error.status === 504 ? 'The explanation request timed out. Please try again.' : error.error?.detail ?? 'AI explanation is temporarily unavailable.'),
+      next: (explanation) => { this.aiExplanation.set(explanation); this.aiQuotaExceeded.set(false); },
+      error: (error) => {
+        this.aiQuotaExceeded.set(error.status === 402);
+        this.aiError.set(this.aiErrorMessage(error));
+      },
     });
   }
   retrainModel(): void {
@@ -176,5 +186,10 @@ export class StockDetailComponent implements OnInit, OnDestroy {
     });
   }
   private showResult(analysis: StockAnalysis): void { this.clearTrainingMessageTimer(); this.analysis.set(analysis); this.history.set(analysis.history); this.indicators.set(analysis.indicators); this.prediction.set(analysis.prediction); this.historyStore.add(analysis.prediction); this.loading.set(false); }
+  private aiErrorMessage(error: { status?: number; error?: { detail?: string } }): string {
+    if (error.status === 402) return error.error?.detail ?? 'Your current plan has no AI explanations remaining today.';
+    if (error.status === 504) return 'The explanation request timed out. Please try again.';
+    return error.error?.detail ?? 'AI explanation is temporarily unavailable.';
+  }
   private clearTrainingMessageTimer(): void { if (this.trainingMessageTimer !== undefined) { clearTimeout(this.trainingMessageTimer); this.trainingMessageTimer = undefined; } }
 }

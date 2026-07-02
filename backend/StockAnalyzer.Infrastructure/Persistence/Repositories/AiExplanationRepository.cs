@@ -24,10 +24,20 @@ public sealed class AiExplanationRepository(StockAnalyzerDbContext dbContext)
             .OrderByDescending(value => value.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
+    public Task<AiExplanation?> FindLatestValidForTickerAsync(
+        string ticker,
+        CancellationToken cancellationToken) =>
+        dbContext.AiExplanations
+            .AsNoTracking()
+            .Where(value =>
+                value.Ticker == ticker &&
+                value.ExpiresAt > DateTimeOffset.UtcNow)
+            .OrderByDescending(value => value.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task AddAsync(AiExplanation explanation, CancellationToken cancellationToken)
     {
         dbContext.AiExplanations.Add(explanation);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 }
-

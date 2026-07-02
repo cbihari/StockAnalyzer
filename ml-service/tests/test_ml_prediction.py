@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -92,6 +94,7 @@ def test_model_path_uses_normalized_ticker_filename(tmp_path, monkeypatch) -> No
 
 def test_load_or_train_model_reuses_existing_model(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(ml_prediction, "MODEL_REGISTRY", ModelRegistry(tmp_path))
+    ml_prediction._MODEL_CACHE.clear()
     model_path = model_path_for_ticker("AAPL")
     model_path.parent.mkdir(parents=True)
     joblib.dump(PredictableForest(), model_path)
@@ -116,6 +119,46 @@ def test_load_or_train_model_reuses_existing_model(tmp_path, monkeypatch) -> Non
     assert isinstance(model, RandomForestClassifier)
     assert model_status == "existing_model"
     assert metadata.accuracy == pytest.approx(0.56)
+
+
+def test_existing_model_is_loaded_once_until_file_changes(tmp_path, monkeypatch) -> None:
+    registry = ModelRegistry(tmp_path)
+    monkeypatch.setattr(ml_prediction, "MODEL_REGISTRY", registry)
+    ml_prediction._MODEL_CACHE.clear()
+    model_path = registry.get_model_path("AAPL")
+    model_path.parent.mkdir(parents=True)
+    joblib.dump(PredictableForest(), model_path)
+    registry.save_model_metadata(
+        ticker="AAPL",
+        model_name="RandomForestClassifier",
+        training_rows=800,
+        test_rows=200,
+        accuracy=0.56,
+        precision=0.58,
+        recall=0.54,
+        features=FEATURE_COLUMNS,
+    )
+    real_load = joblib.load
+    calls: list[str] = []
+
+    def tracked_load(path):
+        calls.append(str(path))
+        return real_load(path)
+
+    monkeypatch.setattr(ml_prediction.joblib, "load", tracked_load)
+
+    first, _, _ = load_or_train_model("AAPL")
+    second, _, _ = load_or_train_model("AAPL")
+    current_stat = model_path.stat()
+    os.utime(
+        model_path,
+        ns=(current_stat.st_atime_ns, current_stat.st_mtime_ns + 1_000_000),
+    )
+    third, _, _ = load_or_train_model("AAPL")
+
+    assert first is second
+    assert third is not second
+    assert calls == [str(model_path), str(model_path)]
 
 
 def test_load_or_train_model_trains_when_missing(tmp_path, monkeypatch) -> None:

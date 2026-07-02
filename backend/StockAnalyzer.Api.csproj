@@ -28,6 +28,7 @@
     <Compile Remove="StockAnalyzer.Application/**/*.cs" />
     <Compile Remove="StockAnalyzer.Domain/**/*.cs" />
     <Compile Remove="StockAnalyzer.Infrastructure/**/*.cs" />
+    <Compile Remove="StockAnalyzer.Tests/**/*.cs" />
   </ItemGroup>
 
 </Project>

@@ -62,6 +62,15 @@ Suggested additional captures:
 - Swagger/OpenAPI documentation for .NET and FastAPI
 - Angular, .NET, and Python unit tests with GitHub Actions CI
 
+## Business Direction
+
+StockAnalyzer is intended to monetize as an educational research SaaS, not as a
+stock-tip or personalized-advice product. The first commercial roadmap focuses
+on freemium usage limits, paid research workflow features, affiliate disclosure,
+learning products, and later creator/B2B tooling.
+
+See [docs/15_Business_Monetization_Roadmap.md](docs/15_Business_Monetization_Roadmap.md).
+
 ## Architecture
 
 | Service | Technology | Host URL |
@@ -146,6 +155,8 @@ Compose reads values from `.env`. Never commit real credentials.
 | `ML_LOG_LEVEL` | `INFO` | FastAPI logging level |
 | `MARKET_DATA_PROVIDER` | `yahoo` | ML market-data adapter selection |
 | `MARKET_DATA_PROVIDER_NAME` | `yahoo_finance` | Provider label returned by the .NET research API |
+| `PAYMENT_PROVIDER` | `manual` | .NET checkout provider adapter. Manual is for local/testing only. |
+| `STOCKANALYZER_PLAN_OVERRIDE` | empty | Optional local/staging override for plan resolution: `free`, `pro`, or `power`. |
 | `AI_EXPLANATIONS_ENABLED` | `true` | Enables optional generated explanations |
 | `LLM_PROVIDER` | `openai` | Selects the replaceable LLM provider |
 | `OPENAI_API_KEY` | empty | OpenAI API key, passed only to FastAPI |

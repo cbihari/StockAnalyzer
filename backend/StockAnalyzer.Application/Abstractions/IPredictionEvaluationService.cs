@@ -13,4 +13,12 @@ public interface IPredictionEvaluationService
         string outcome,
         int limit,
         CancellationToken cancellationToken);
+
+    Task<PredictionHistoryCsvExportDto> ExportHistoryCsvAsync(
+        Guid? userId,
+        string workspaceId,
+        string? ticker,
+        string outcome,
+        int limit,
+        CancellationToken cancellationToken);
 }

@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/predict", tags=["prediction"])
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MODEL_REGISTRY = ModelRegistry(PROJECT_ROOT)
+_MODEL_CACHE: dict[Path, tuple[int, RandomForestClassifier]] = {}
 
 
 class MlPredictionResponse(BaseModel):
@@ -94,6 +95,19 @@ def model_path_for_ticker(ticker: str) -> Path:
     return MODEL_REGISTRY.get_model_path(ticker)
 
 
+def load_saved_model(model_path: Path) -> RandomForestClassifier:
+    modified_at = model_path.stat().st_mtime_ns
+    cached = _MODEL_CACHE.get(model_path)
+    if cached and cached[0] == modified_at:
+        return cached[1]
+
+    model = joblib.load(model_path)
+    if not isinstance(model, RandomForestClassifier):
+        raise TypeError("The saved model is not a RandomForestClassifier.")
+    _MODEL_CACHE[model_path] = (modified_at, model)
+    return model
+
+
 def load_or_train_model(
     ticker: str,
 ) -> tuple[RandomForestClassifier, Literal["existing_model", "newly_trained_model"], ModelMetadata]:
@@ -102,18 +116,13 @@ def load_or_train_model(
         metadata = MODEL_REGISTRY.load_model_metadata(ticker)
         if MODEL_REGISTRY.model_exists(ticker) and metadata is not None:
             try:
-                model = joblib.load(model_path)
+                model = load_saved_model(model_path)
             except Exception as exc:
                 logger.exception("Failed to load model ticker=%s path=%s", ticker, model_path)
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="The trained model could not be loaded.",
                 ) from exc
-            if not isinstance(model, RandomForestClassifier):
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="The saved model is not a RandomForestClassifier.",
-                )
             return model, "existing_model", metadata
 
         logger.info("No model found; starting on-demand training ticker=%s", ticker)

@@ -19,9 +19,9 @@ header { height: 58px; padding: 0 34px; border-bottom: 1px solid var(--border); 
 .notification-link { display: inline-flex; align-items: center; gap: 7px; margin-left: 13px; padding-left: 18px; border-left: 1px solid var(--border); color: #aab5ae; text-decoration: none; }
 .notification-link b { display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--danger); color: #190606; font-size: .63rem; }
 .auth-nav { display: flex; align-items: center; gap: 9px; margin-left: 10px; padding-left: 18px; border-left: 1px solid var(--border); }
-.auth-nav a, .auth-nav button, .sidebar-auth-mobile a, .sidebar-auth-mobile button { border: 0; color: #aab5ae; background: transparent; font: inherit; text-decoration: none; }
+.auth-nav a, .sidebar-auth-mobile a { border: 0; color: #aab5ae; background: transparent; font: inherit; text-decoration: none; }
 .auth-nav .signup-link { padding: 7px 10px; border: 1px solid rgba(99,241,174,.24); border-radius: 7px; color: var(--accent); }
-.auth-nav button:hover, .auth-nav a:hover, .sidebar-auth-mobile button:hover, .sidebar-auth-mobile a:hover { color: var(--text); }
+.auth-nav a:hover, .sidebar-auth-mobile a:hover { color: var(--text); }
 .sidebar-auth-mobile { display: none; }
 .claim-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(2,5,4,.72); backdrop-filter: blur(8px); }
 .claim-dialog { width: min(100%, 520px); padding: 27px; }

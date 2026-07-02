@@ -1,5 +1,7 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using StockAnalyzer.Api.Auth;
 using StockAnalyzer.Application.Abstractions;
 using StockAnalyzer.Application.DTOs;
 using StockAnalyzer.Domain.Workspace;
@@ -39,6 +41,7 @@ public sealed class AffiliateController(
         return Accepted();
     }
 
+    [Authorize(Policy = AuthPolicies.AffiliateAdmin)]
     [HttpGet("stats")]
     public async Task<ActionResult<IReadOnlyList<AffiliateClickStatDto>>> GetStats(
         CancellationToken cancellationToken)
@@ -48,6 +51,7 @@ public sealed class AffiliateController(
                 ?? configuration["AffiliateAdminEnabled"],
             out var value) && value;
         if (!enabled) return NotFound();
+        if (!AuthPolicies.IsAffiliateAdmin(User)) return Forbid();
         return Ok(await repository.GetStatsAsync(cancellationToken));
     }
 

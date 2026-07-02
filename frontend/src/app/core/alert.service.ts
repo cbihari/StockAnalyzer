@@ -5,6 +5,7 @@ import { StockApiService } from './stock-api.service';
 
 const RULES_KEY = 'stock-analyzer-alert-rules-v1';
 const NOTIFICATIONS_KEY = 'stock-analyzer-notifications-v1';
+const SYNC_DEBOUNCE_MS = 150;
 
 export type AlertType = 'price_above' | 'price_below' | 'daily_move';
 export type AlertFrequency = 'once' | 'daily';
@@ -47,6 +48,9 @@ export interface AlertDraft {
 @Injectable({ providedIn: 'root' })
 export class AlertService {
   private readonly api = inject(StockApiService);
+  private localVersion = 0;
+  private saveVersion = 0;
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
   readonly rules = signal<AlertRule[]>(this.load<AlertRule[]>(RULES_KEY, []));
   readonly notifications = signal<AlertNotification[]>(this.load<AlertNotification[]>(NOTIFICATIONS_KEY, []));
   readonly unreadCount = computed(() => this.notifications().filter((item) => !item.read).length);
@@ -131,26 +135,44 @@ export class AlertService {
     };
   }
 
-  private setRules(rules: AlertRule[]): void { this.rules.set(rules); this.save(RULES_KEY, rules); this.sync(); }
-  private setNotifications(items: AlertNotification[]): void { this.notifications.set(items); this.save(NOTIFICATIONS_KEY, items); this.sync(); }
+  private setRules(rules: AlertRule[]): void { this.localVersion++; this.rules.set(rules); this.save(RULES_KEY, rules); this.scheduleSync(); }
+  private setNotifications(items: AlertNotification[]): void { this.localVersion++; this.notifications.set(items); this.save(NOTIFICATIONS_KEY, items); this.scheduleSync(); }
   private save(key: string, value: unknown): void { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Optional guest persistence. */ } }
   private load<T>(key: string, fallback: T): T { try { return JSON.parse(localStorage.getItem(key) ?? 'null') ?? fallback; } catch { return fallback; } }
   private hydrate(): void {
+    const hydrateVersion = this.localVersion;
     this.syncState.set('syncing');
     this.api.getWorkspaceAlerts().subscribe({
       next: (remote) => {
+        if (this.localVersion !== hydrateVersion) {
+          this.scheduleSync();
+          return;
+        }
         if (remote.rules.length || remote.notifications.length) {
           this.rules.set(remote.rules as AlertRule[]); this.notifications.set(remote.notifications as AlertNotification[]);
           this.save(RULES_KEY, remote.rules); this.save(NOTIFICATIONS_KEY, remote.notifications); this.syncState.set('synced');
-        } else { this.sync(); }
+        } else { this.scheduleSync(); }
       },
       error: () => this.syncState.set('offline'),
     });
   }
-  private sync(): void {
+  private scheduleSync(): void {
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      this.sync(this.localVersion);
+    }, SYNC_DEBOUNCE_MS);
+  }
+  private sync(version: number): void {
+    const requestVersion = ++this.saveVersion;
     this.syncState.set('syncing');
     this.api.saveWorkspaceAlerts({ rules: this.rules(), notifications: this.notifications() }).subscribe({
-      next: () => this.syncState.set('synced'), error: () => this.syncState.set('offline'),
+      next: () => {
+        if (requestVersion === this.saveVersion && version === this.localVersion) this.syncState.set('synced');
+      },
+      error: () => {
+        if (requestVersion === this.saveVersion) this.syncState.set('offline');
+      },
     });
   }
 }

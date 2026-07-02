@@ -56,6 +56,18 @@ def test_load_returns_none_when_metadata_is_missing(tmp_path) -> None:
     assert ModelRegistry(tmp_path).load_model_metadata("INFY.NS") is None
 
 
+def test_model_dir_environment_override(tmp_path, monkeypatch) -> None:
+    configured_dir = tmp_path / "persistent-models"
+    monkeypatch.setenv("MODEL_DIR", str(configured_dir))
+
+    registry = ModelRegistry(tmp_path / "project")
+
+    assert registry.models_dir == configured_dir.resolve()
+    assert registry.get_model_path("RELIANCE.NS") == (
+        configured_dir / "RELIANCE_NS_random_forest.pkl"
+    )
+
+
 def test_saves_and_lists_immutable_model_versions(tmp_path) -> None:
     registry = ModelRegistry(tmp_path)
     model_path = registry.get_model_path("AAPL")

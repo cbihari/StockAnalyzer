@@ -13,7 +13,14 @@ export class AuthCallbackComponent implements OnInit {
 
   ngOnInit(): void {
     const token = new URLSearchParams(this.route.snapshot.fragment ?? '').get('token');
-    if (token) this.auth.acceptToken(token);
-    this.router.navigateByUrl(token ? '/' : '/login');
+    if (!token) {
+      this.router.navigateByUrl('/login');
+      return;
+    }
+
+    this.auth.acceptToken(token).subscribe({
+      next: () => this.router.navigateByUrl('/'),
+      error: () => this.router.navigate(['/login'], { queryParams: { oauthError: 'google' } }),
+    });
   }
 }

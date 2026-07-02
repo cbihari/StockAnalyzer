@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using StockAnalyzer.Domain.Stocks;
+using StockAnalyzer.Domain.Monetization;
 using StockAnalyzer.Domain.Workspace;
 using StockAnalyzer.Infrastructure.Identity;
 
@@ -17,6 +18,8 @@ public sealed class StockAnalyzerDbContext(DbContextOptions<StockAnalyzerDbConte
     public DbSet<GuestWorkspace> GuestWorkspaces => Set<GuestWorkspace>();
     public DbSet<AiExplanation> AiExplanations => Set<AiExplanation>();
     public DbSet<AffiliateClick> AffiliateClicks => Set<AffiliateClick>();
+    public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();
+    public DbSet<UserSubscription> UserSubscriptions => Set<UserSubscription>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

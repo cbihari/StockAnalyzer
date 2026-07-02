@@ -1,7 +1,7 @@
-import { TestBed } from '@angular/core/testing';
+import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { WatchlistService } from './watchlist.service';
 import { StockApiService } from './stock-api.service';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 
 describe('WatchlistService', () => {
   beforeEach(() => {
@@ -23,4 +23,42 @@ describe('WatchlistService', () => {
       tags: ['growth', 'mega cap', 'tech', 'us', 'extra'],
     }));
   });
+
+  it('debounces saves and sends only the latest watchlist state', fakeAsync(() => {
+    const api = TestBed.inject(StockApiService) as jasmine.SpyObj<StockApiService>;
+    api.saveWorkspaceWatchlist = jasmine.createSpy('saveWorkspaceWatchlist').and.callFake((items) => of(items));
+    const service = TestBed.inject(WatchlistService);
+
+    service.toggle('TSLA');
+    service.toggle('NVDA');
+    tick(149);
+    expect(api.saveWorkspaceWatchlist).not.toHaveBeenCalled();
+
+    tick(1);
+    expect(api.saveWorkspaceWatchlist).toHaveBeenCalledTimes(1);
+    expect(api.saveWorkspaceWatchlist).toHaveBeenCalledWith(service.items());
+  }));
+
+  it('does not let late hydration overwrite local edits', fakeAsync(() => {
+    const remote = new Subject<unknown[]>();
+    TestBed.resetTestingModule();
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [{
+        provide: StockApiService,
+        useValue: {
+          getWorkspaceWatchlist: () => remote.asObservable(),
+          saveWorkspaceWatchlist: (items: unknown) => of(items),
+        },
+      }],
+    });
+    const service = TestBed.inject(WatchlistService);
+
+    service.updateDetails('AAPL', 'Local note', ['local']);
+    remote.next([{ ticker: 'TSLA', addedAt: new Date().toISOString(), note: 'Remote', tags: [] }]);
+    tick(150);
+
+    expect(service.get('AAPL')?.note).toBe('Local note');
+    expect(service.has('TSLA')).toBeFalse();
+  }));
 });

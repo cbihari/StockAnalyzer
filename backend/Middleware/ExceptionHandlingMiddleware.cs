@@ -24,6 +24,7 @@ public sealed class ExceptionHandlingMiddleware(
         var (statusCode, title, detail) = exception switch
         {
             ArgumentException => (400, "Invalid request", exception.Message),
+            PlanLimitExceededException => (402, "Plan limit reached", exception.Message),
             ExternalServiceException external =>
                 (external.StatusCode, "ML service request failed", external.Message),
             _ => (500, "Unexpected server error", "An unexpected error occurred.")
@@ -39,7 +40,6 @@ public sealed class ExceptionHandlingMiddleware(
         }
 
         context.Response.StatusCode = statusCode;
-        context.Response.ContentType = "application/problem+json";
         await context.Response.WriteAsJsonAsync(new ProblemDetails
         {
             Status = statusCode,
@@ -47,6 +47,6 @@ public sealed class ExceptionHandlingMiddleware(
             Detail = detail,
             Instance = context.Request.Path,
             Extensions = { ["correlationId"] = context.TraceIdentifier }
-        });
+        }, options: null, contentType: "application/problem+json");
     }
 }

@@ -18,7 +18,7 @@
       <a class="upgrade-link" routerLink="/upgrade" routerLinkActive="active"><span>↑</span> Upgrade</a>
     </nav>
     <div class="sidebar-auth-mobile">
-      @if (auth.currentUser(); as user) { <span>{{ user.displayName }}</span><button type="button" (click)="logout()">Log out</button> }
+      @if (auth.currentUser(); as user) { <app-user-profile [user]="user" (logoutRequested)="logout()" /> }
       @else { <a routerLink="/login">Log in</a><a routerLink="/signup">Sign up</a> }
     </div>
     <p class="sidebar-note">Educational analysis only. Not financial advice.</p>
@@ -29,7 +29,7 @@
       <span>Research systems online</span>
       <div class="auth-nav">
         @if (auth.currentUser(); as user) {
-          <span>{{ user.displayName }}</span><button type="button" (click)="logout()">Log out</button>
+          <app-user-profile [user]="user" (logoutRequested)="logout()" />
         } @else {
           <a routerLink="/login">Log in</a><a class="signup-link" routerLink="/signup">Sign up</a>
         }

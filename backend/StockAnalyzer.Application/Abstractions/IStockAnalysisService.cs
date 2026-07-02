@@ -46,6 +46,10 @@ public interface IStockAnalysisService
         string ticker,
         CancellationToken cancellationToken);
 
+    Task<MlPredictionDto> GetMlPredictionPreviewAsync(
+        string ticker,
+        CancellationToken cancellationToken);
+
     Task<MlPredictionDto> GetMlPredictionAsync(
         string ticker,
         CancellationToken cancellationToken);

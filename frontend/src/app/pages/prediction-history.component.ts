@@ -30,8 +30,16 @@ import { InfoTipComponent } from '../shared/info-tip.component';
           <label for="history-ticker">Ticker<input id="history-ticker" name="ticker" [(ngModel)]="ticker" placeholder="e.g. RELIANCE.NS or AAPL" /></label>
           <label for="history-outcome">Outcome <app-info-tip text="What actually happened after the prediction" /><select id="history-outcome" name="outcome" [(ngModel)]="outcome"><option value="all">All outcomes</option><option value="pending">Pending</option><option value="correct">Correct</option><option value="wrong">Wrong</option></select></label>
           <button type="submit" [disabled]="loading()">{{ loading() ? 'Filtering...' : 'Apply filters' }}</button>
-          <button type="button" class="secondary-button" [disabled]="!data.items.length" (click)="exportCsv(data.items)">Export CSV</button>
+          <button type="button" class="secondary-button" [disabled]="!data.items.length || exporting()" (click)="exportCsv()">{{ exporting() ? 'Exporting...' : 'Export CSV' }}</button>
         </form>
+        @if (exportQuotaExceeded()) {
+          <div class="notice warning export-upgrade" role="alert">
+            <span>{{ exportMessage() }}</span>
+            <a routerLink="/upgrade" class="secondary-button">View plans</a>
+          </div>
+        } @else if (exportMessage()) {
+          <div class="notice" role="status">{{ exportMessage() }}</div>
+        }
 
         @if (loading()) { <div class="loading card" role="status"><span class="spinner"></span><strong>Loading prediction history...</strong></div> }
         @else if (data.items.length) {
@@ -51,8 +59,11 @@ export class PredictionHistoryComponent implements OnInit {
   readonly history = signal<PredictionHistoryResponse | null>(null);
   readonly loading = signal(false);
   readonly evaluating = signal(false);
+  readonly exporting = signal(false);
   readonly error = signal('');
   readonly evaluationMessage = signal('');
+  readonly exportMessage = signal('');
+  readonly exportQuotaExceeded = signal(false);
   ticker = '';
   outcome = 'all';
 
@@ -82,11 +93,31 @@ export class PredictionHistoryComponent implements OnInit {
     return `The next eligible close moved ${item.actual_result}, against the ${item.prediction} estimate. Technical signals describe probabilities, while news, gaps, volatility, and changing market conditions can produce a different outcome.`;
   }
 
-  exportCsv(items: PersistedPredictionHistoryItem[]): void {
-    const header = ['ticker','prediction','confidence','probability_up','probability_down','actual_result','is_correct','prediction_type','model_status','model_accuracy','created_at'];
-    const rows = items.map((item) => [item.ticker,item.prediction,item.confidence,item.probability_up ?? '',item.probability_down ?? '',item.actual_result ?? '',item.is_correct ?? '',item.prediction_type,item.model_status ?? '',item.model_accuracy ?? '',item.created_at]);
-    const csv = [header, ...rows].map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n');
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    const link = document.createElement('a'); link.href = url; link.download = `stockanalyzer-predictions-${new Date().toISOString().slice(0, 10)}.csv`; link.click(); URL.revokeObjectURL(url);
+  exportCsv(): void {
+    this.exporting.set(true); this.exportMessage.set(''); this.exportQuotaExceeded.set(false);
+    this.api.exportPredictionHistoryCsv(this.ticker.toUpperCase(), this.outcome).pipe(finalize(() => this.exporting.set(false))).subscribe({
+      next: (response) => {
+        this.downloadCsv(response.body ?? new Blob([], { type: 'text/csv;charset=utf-8' }), this.exportFileName(response.headers.get('content-disposition')));
+        this.exportMessage.set('Prediction history CSV exported.');
+      },
+      error: (error) => {
+        this.exportQuotaExceeded.set(error.status === 402);
+        this.exportMessage.set(error.status === 402 ? error.error?.detail ?? 'Your current plan has no CSV exports remaining today.' : error.error?.detail ?? 'Prediction history could not be exported.');
+      },
+    });
+  }
+
+  private downloadCsv(blob: Blob, fileName: string): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private exportFileName(contentDisposition: string | null): string {
+    const match = contentDisposition?.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+    return match?.[1] ? decodeURIComponent(match[1]) : `stockanalyzer-predictions-${new Date().toISOString().slice(0, 10)}.csv`;
   }
 }

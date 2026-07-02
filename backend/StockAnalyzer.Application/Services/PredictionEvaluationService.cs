@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Logging;
+using System.Globalization;
+using System.Text;
 using StockAnalyzer.Application.Abstractions;
 using StockAnalyzer.Application.DTOs;
 using StockAnalyzer.Application.Exceptions;
@@ -8,8 +10,11 @@ namespace StockAnalyzer.Application.Services;
 public sealed class PredictionEvaluationService(
     IMlServiceClient mlServiceClient,
     IPredictionRepository predictionRepository,
+    IMonetizationService monetizationService,
     ILogger<PredictionEvaluationService> logger) : IPredictionEvaluationService
 {
+    private const string CsvExportFeature = "csv_export";
+
     public async Task<PredictionEvaluationDto> EvaluateAsync(CancellationToken cancellationToken)
     {
         var predictions = await predictionRepository.GetUnevaluatedAsync(cancellationToken);
@@ -121,4 +126,91 @@ public sealed class PredictionEvaluationService(
             wrong,
             evaluated == 0 ? 0 : Math.Round(correct * 100d / evaluated, 2));
     }
+
+    public async Task<PredictionHistoryCsvExportDto> ExportHistoryCsvAsync(
+        Guid? userId,
+        string workspaceId,
+        string? ticker,
+        string outcome,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        var quota = await monetizationService.CheckAsync(
+            userId,
+            workspaceId,
+            CsvExportFeature,
+            1,
+            cancellationToken);
+        if (!quota.Allowed)
+        {
+            throw new PlanLimitExceededException(quota.Message);
+        }
+
+        var history = await GetHistoryAsync(
+            userId,
+            workspaceId,
+            ticker,
+            outcome,
+            limit,
+            cancellationToken);
+        await monetizationService.RecordAsync(
+            userId,
+            workspaceId,
+            CsvExportFeature,
+            1,
+            cancellationToken);
+
+        return new PredictionHistoryCsvExportDto(
+            $"stockanalyzer-predictions-{DateTimeOffset.UtcNow:yyyy-MM-dd}.csv",
+            "text/csv;charset=utf-8",
+            BuildCsv(history.Items));
+    }
+
+    private static string BuildCsv(IReadOnlyList<PredictionHistoryItemDto> items)
+    {
+        string[] header =
+        [
+            "ticker",
+            "prediction",
+            "confidence",
+            "probability_up",
+            "probability_down",
+            "actual_result",
+            "is_correct",
+            "prediction_type",
+            "model_status",
+            "model_accuracy",
+            "created_at"
+        ];
+        var builder = new StringBuilder();
+        AppendRow(builder, header);
+        foreach (var item in items)
+        {
+            AppendRow(builder,
+            [
+                item.Ticker,
+                item.Prediction,
+                item.Confidence.ToString(CultureInfo.InvariantCulture),
+                item.ProbabilityUp?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                item.ProbabilityDown?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                item.ActualResult ?? string.Empty,
+                item.IsCorrect?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                item.PredictionType,
+                item.ModelStatus ?? string.Empty,
+                item.ModelAccuracy?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                item.CreatedAt.ToString("O", CultureInfo.InvariantCulture)
+            ]);
+        }
+
+        return builder.ToString();
+    }
+
+    private static void AppendRow(StringBuilder builder, IReadOnlyList<string> values)
+    {
+        builder.AppendJoin(',', values.Select(EscapeCsv));
+        builder.Append('\n');
+    }
+
+    private static string EscapeCsv(string value) =>
+        string.Concat('"', value.Replace("\"", "\"\"", StringComparison.Ordinal), '"');
 }

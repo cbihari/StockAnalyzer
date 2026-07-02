@@ -11,6 +11,9 @@ public interface IAiExplanationRepository
         string promptVersion,
         CancellationToken cancellationToken);
 
+    Task<AiExplanation?> FindLatestValidForTickerAsync(
+        string ticker,
+        CancellationToken cancellationToken);
+
     Task AddAsync(AiExplanation explanation, CancellationToken cancellationToken);
 }
-

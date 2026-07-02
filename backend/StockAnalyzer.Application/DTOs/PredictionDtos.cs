@@ -116,6 +116,11 @@ public sealed record PredictionHistoryDto(
     int Wrong,
     [property: JsonPropertyName("accuracy_percentage")] double AccuracyPercentage);
 
+public sealed record PredictionHistoryCsvExportDto(
+    string FileName,
+    string ContentType,
+    string Content);
+
 public sealed record PredictionExplanationDto(
     string Ticker,
     string Prediction,

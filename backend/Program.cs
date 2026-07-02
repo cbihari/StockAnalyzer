@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using StockAnalyzer.Api.Auth;
+using StockAnalyzer.Api.Configuration;
 using StockAnalyzer.Api.Middleware;
 using StockAnalyzer.Application;
 using StockAnalyzer.Infrastructure;
@@ -70,6 +71,11 @@ var authentication = builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
     })
     .AddCookie(IdentityConstants.ExternalScheme);
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(AuthPolicies.AffiliateAdmin, policy =>
+        policy.RequireAssertion(context => AuthPolicies.IsAffiliateAdmin(context.User)));
+});
 if (googleEnabled)
 {
     authentication.AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
@@ -79,10 +85,9 @@ if (googleEnabled)
         options.ClientSecret = googleClientSecret!;
     });
 }
-var allowedOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")
-        ?? builder.Configuration["FrontendUrl"]
-        ?? "http://localhost:4200")
-    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+var allowedOrigins = DeploymentSettings.ResolveAllowedOrigins(
+    Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? builder.Configuration["FrontendUrl"],
+    builder.Environment.IsDevelopment());
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy => policy

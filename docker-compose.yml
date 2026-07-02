@@ -28,8 +28,12 @@ services:
       FrontendUrl: ${FRONTEND_URL:-http://localhost:4200}
       MlServiceUrl: http://python-ml-service:8000
       MarketDataProviderName: ${MARKET_DATA_PROVIDER_NAME:-yahoo_finance}
+      Payments__Provider: ${PAYMENT_PROVIDER:-manual}
+      STOCKANALYZER_PLAN_OVERRIDE: ${STOCKANALYZER_PLAN_OVERRIDE:-}
       MlServicePredictionTimeoutSeconds: ${ML_PREDICTION_TIMEOUT_SECONDS:-600}
       MlServiceAiTimeoutSeconds: ${ML_AI_TIMEOUT_SECONDS:-45}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
     depends_on:

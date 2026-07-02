@@ -7,6 +7,7 @@ public interface IAiExplanationService
     Task<AiExplanationResponseDto> ExplainAsync(
         string ticker,
         bool forceRefresh,
+        Guid? userId,
+        string clientId,
         CancellationToken cancellationToken);
 }
-

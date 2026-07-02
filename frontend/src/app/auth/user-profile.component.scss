@@ -1,0 +1,17 @@
+:host { position: relative; display: block; }
+.profile-trigger { display: flex; align-items: center; gap: 8px; max-width: 190px; padding: 4px 7px 4px 4px; border: 1px solid transparent; border-radius: 999px; color: var(--text); background: transparent; font: inherit; cursor: pointer; transition: .18s ease; }
+.profile-trigger:hover, .profile-trigger[aria-expanded='true'] { border-color: rgba(99,241,174,.2); background: rgba(99,241,174,.07); }
+.avatar { flex: 0 0 auto; width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid rgba(99,241,174,.25); border-radius: 50%; color: #06120c; background: linear-gradient(135deg, var(--accent), #a7f3d0); font-size: .62rem; font-weight: 900; }
+.profile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.chevron { color: var(--muted); font-size: .8rem; transition: transform .18s ease; }
+.profile-trigger[aria-expanded='true'] .chevron { transform: rotate(180deg); }
+.profile-card { position: absolute; z-index: 80; top: calc(100% + 9px); right: 0; width: min(290px, calc(100vw - 32px)); padding: 14px; border: 1px solid rgba(99,241,174,.16); border-radius: 16px; background: rgba(11,16,13,.98); box-shadow: 0 18px 46px rgba(0,0,0,.42); backdrop-filter: blur(22px); }
+.profile-summary { display: flex; align-items: center; gap: 11px; min-width: 0; padding: 3px 2px 13px; }
+.avatar-large { width: 40px; height: 40px; font-size: .74rem; }
+.profile-summary div { min-width: 0; display: grid; gap: 3px; }
+.profile-summary strong, .profile-summary span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-summary strong { color: var(--text); font-size: .78rem; }
+.profile-summary span { color: var(--muted); font-size: .68rem; }
+.logout-button { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; color: #c6d0ca; background: rgba(255,255,255,.025); font: inherit; font-weight: 700; text-align: left; cursor: pointer; transition: .18s ease; }
+.logout-button:hover { border-color: rgba(255,112,112,.28); color: #ffaaaa; background: rgba(255,112,112,.07); }
+@media (max-width: 780px) { .profile-name { max-width: 130px; } .profile-card { right: 0; } }

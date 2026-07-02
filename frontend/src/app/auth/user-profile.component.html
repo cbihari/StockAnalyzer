@@ -1,0 +1,19 @@
+<div class="profile">
+  <button class="profile-trigger" type="button" (click)="toggle()" [attr.aria-expanded]="open" aria-haspopup="menu">
+    <span class="avatar" aria-hidden="true">{{ initials }}</span>
+    <span class="profile-name">{{ user.displayName }}</span>
+    <span class="chevron" aria-hidden="true">⌄</span>
+  </button>
+  @if (open) {
+    <section class="profile-card" role="menu">
+      <div class="profile-summary">
+        <span class="avatar avatar-large" aria-hidden="true">{{ initials }}</span>
+        <div>
+          <strong>{{ user.displayName }}</strong>
+          <span>{{ user.email }}</span>
+        </div>
+      </div>
+      <button class="logout-button" type="button" role="menuitem" (click)="logout()">Log out</button>
+    </section>
+  }
+</div>

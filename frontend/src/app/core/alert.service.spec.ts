@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { AlertService } from './alert.service';
 import { MarketInstrument } from './models';
 import { StockApiService } from './stock-api.service';
@@ -26,4 +26,17 @@ describe('AlertService', () => {
     service.add('AAPL', { type: 'daily_move', threshold: 1, frequency: 'daily', cooldownHours: 24, quietStart: '22:00', quietEnd: '07:00' });
     expect(service.evaluate([quote], '2026-06-12T23:00:00Z', new Date('2026-06-12T23:00:00Z'))).toEqual([]);
   });
+
+  it('debounces alert saves to the latest state', fakeAsync(() => {
+    const api = TestBed.inject(StockApiService) as jasmine.SpyObj<StockApiService>;
+    api.saveWorkspaceAlerts = jasmine.createSpy('saveWorkspaceAlerts').and.callFake((state) => of(state));
+    const service = TestBed.inject(AlertService);
+
+    const rule = service.add('AAPL', { type: 'price_above', threshold: 190, frequency: 'daily', cooldownHours: 24, quietStart: '', quietEnd: '' });
+    service.toggle(rule.id);
+    tick(150);
+
+    expect(api.saveWorkspaceAlerts).toHaveBeenCalledTimes(1);
+    expect(api.saveWorkspaceAlerts).toHaveBeenCalledWith({ rules: service.rules(), notifications: service.notifications() });
+  }));
 });

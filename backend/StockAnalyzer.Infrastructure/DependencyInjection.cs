@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using StockAnalyzer.Application.Abstractions;
 using StockAnalyzer.Infrastructure.MlService;
+using StockAnalyzer.Infrastructure.Payments;
 using StockAnalyzer.Infrastructure.Persistence;
 using StockAnalyzer.Infrastructure.Persistence.Repositories;
 
@@ -28,23 +29,22 @@ public static class DependencyInjection
         services.AddScoped<IGuestWorkspaceRepository, GuestWorkspaceRepository>();
         services.AddScoped<IAiExplanationRepository, AiExplanationRepository>();
         services.AddScoped<IAffiliateClickRepository, AffiliateClickRepository>();
+        services.AddScoped<IUsageRepository, UsageRepository>();
+        services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
+        services.AddSingleton<IPaymentProvider, ManualPaymentProvider>();
         services.AddSingleton<IMarketDataProviderInfo, MarketDataProviderInfo>();
         services.AddHttpClient<IMlServiceClient, MlServiceClient>(client =>
         {
-            var mlServiceUrl = Environment.GetEnvironmentVariable("ML_SERVICE_URL")
-                ?? configuration["MlServiceUrl"]
-                ?? "http://localhost:8000";
-            client.BaseAddress = new Uri(
-                mlServiceUrl.Contains("://", StringComparison.Ordinal)
-                    ? mlServiceUrl
-                    : $"http://{mlServiceUrl}");
+            client.BaseAddress = BuildMlServiceUri(
+                Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? configuration["MlServiceUrl"],
+                Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"));
             // Per-request cancellation in MlServiceClient allows first-time training more time.
             client.Timeout = Timeout.InfiniteTimeSpan;
         });
         return services;
     }
 
-    private static string BuildConnectionString(string value)
+    internal static string BuildConnectionString(string value)
     {
         if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)
             || (uri.Scheme != "postgres" && uri.Scheme != "postgresql"))
@@ -63,5 +63,21 @@ public static class DependencyInjection
             SslMode = SslMode.VerifyFull,
             Pooling = true
         }.ConnectionString;
+    }
+
+    internal static Uri BuildMlServiceUri(string? value, string? environmentName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            if (string.Equals(environmentName, "Production", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("ML_SERVICE_URL is required in production.");
+            }
+            value = "http://localhost:8000";
+        }
+
+        return new Uri(
+            value.Contains("://", StringComparison.Ordinal) ? value : $"http://{value}",
+            UriKind.Absolute);
     }
 }

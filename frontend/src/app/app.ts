@@ -1,12 +1,13 @@
 import { Component, effect, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from './auth/auth.service';
+import { UserProfileComponent } from './auth/user-profile.component';
 import { AlertService } from './core/alert.service';
 import { ClientIdentityService } from './core/client-identity.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, UserProfileComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
@@ -18,6 +19,7 @@ export class App {
     readonly alerts: AlertService,
     readonly auth: AuthService,
     private readonly identity: ClientIdentityService,
+    private readonly router: Router,
   ) {
     effect(() => {
       const user = this.auth.currentUser();
@@ -44,7 +46,7 @@ export class App {
 
   logout(): void {
     this.auth.logout();
-    window.location.assign('/');
+    this.router.navigateByUrl('/login');
   }
 
   private claimHandled(userId: string): boolean {

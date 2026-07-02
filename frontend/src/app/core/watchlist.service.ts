@@ -5,6 +5,7 @@ import { normalizeTicker } from './ticker-validation';
 const STORAGE_KEY = 'stock-analyzer-watchlist-v2';
 const LEGACY_STORAGE_KEY = 'stock-analyzer-watchlist-v1';
 const DEFAULT_TICKERS = ['RELIANCE.NS', 'AAPL', 'MSFT'];
+const SYNC_DEBOUNCE_MS = 150;
 
 export interface WatchlistItem {
   ticker: string;
@@ -16,6 +17,9 @@ export interface WatchlistItem {
 @Injectable({ providedIn: 'root' })
 export class WatchlistService {
   private readonly api = inject(StockApiService);
+  private localVersion = 0;
+  private saveVersion = 0;
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
   readonly items = signal<WatchlistItem[]>(this.load());
   readonly tickers = computed(() => this.items().map((item) => item.ticker));
   readonly syncState = signal<'local' | 'syncing' | 'synced' | 'offline'>('local');
@@ -52,9 +56,10 @@ export class WatchlistService {
   }
 
   private set(items: WatchlistItem[]): void {
+    this.localVersion++;
     this.items.set(items);
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch { /* Storage can be unavailable in private contexts. */ }
-    this.sync(items);
+    this.scheduleSync();
   }
 
   private load(): WatchlistItem[] {
@@ -89,26 +94,46 @@ export class WatchlistService {
   }
 
   private hydrate(): void {
+    const hydrateVersion = this.localVersion;
     this.syncState.set('syncing');
     this.api.getWorkspaceWatchlist().subscribe({
       next: (remote) => {
+        if (this.localVersion !== hydrateVersion) {
+          this.scheduleSync();
+          return;
+        }
         if (remote.length) {
           this.items.set(remote);
           try { localStorage.setItem(STORAGE_KEY, JSON.stringify(remote)); } catch { /* Local cache is optional. */ }
           this.syncState.set('synced');
         } else {
-          this.sync(this.items());
+          this.scheduleSync();
         }
       },
       error: () => this.syncState.set('offline'),
     });
   }
 
-  private sync(items: WatchlistItem[]): void {
+  private scheduleSync(): void {
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      this.sync(this.items(), this.localVersion);
+    }, SYNC_DEBOUNCE_MS);
+  }
+
+  private sync(items: WatchlistItem[], version: number): void {
+    const requestVersion = ++this.saveVersion;
     this.syncState.set('syncing');
     this.api.saveWorkspaceWatchlist(items).subscribe({
-      next: () => this.syncState.set('synced'),
-      error: () => this.syncState.set('offline'),
+      next: () => {
+        if (requestVersion === this.saveVersion && version === this.localVersion) {
+          this.syncState.set('synced');
+        }
+      },
+      error: () => {
+        if (requestVersion === this.saveVersion) this.syncState.set('offline');
+      },
     });
   }
 }

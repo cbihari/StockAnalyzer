@@ -1,8 +1,8 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { AffiliateClickStat, AffiliatePartner, AiExplanationResponse, AiResearchResponse, HistoricalPrice, IndicatorResponse, MarketOverview, MlPrediction, ModelTrainingJob, ModelTrainingResult, ModelVersionsResponse, PortfolioHolding, PortfolioSummary, PredictionEvaluationResult, PredictionHistoryResponse, StockAnalysis, StockComparison, StockNews, StockQuotesResponse, StockSuggestion, TickerModelMetrics, WorkspaceAlertState, WorkspaceWatchlistItem } from './models';
+import { AffiliateClickStat, AffiliatePartner, AiExplanationResponse, AiResearchResponse, CheckoutResponse, HistoricalPrice, IndicatorResponse, MarketOverview, MonetizationStatus, MlPrediction, ModelTrainingJob, ModelTrainingResult, ModelVersionsResponse, PortfolioHolding, PortfolioSummary, PredictionEvaluationResult, PredictionHistoryResponse, StockAnalysis, StockComparison, StockNews, StockQuotesResponse, StockSuggestion, TickerModelMetrics, WorkspaceAlertState, WorkspaceWatchlistItem } from './models';
 import { ClientIdentityService } from './client-identity.service';
 
 @Injectable({ providedIn: 'root' })
@@ -124,6 +124,16 @@ export class StockApiService {
     return this.http.get<PredictionHistoryResponse>(`${this.baseUrl}/api/predictions/history`, { params });
   }
 
+  exportPredictionHistoryCsv(ticker = '', outcome = 'all', limit = 500): Observable<HttpResponse<Blob>> {
+    let params = new HttpParams().set('outcome', outcome).set('limit', limit);
+    if (ticker.trim()) params = params.set('ticker', ticker.trim());
+    return this.http.get(`${this.baseUrl}/api/predictions/history/export`, {
+      observe: 'response',
+      params,
+      responseType: 'blob',
+    });
+  }
+
   evaluatePredictions(): Observable<PredictionEvaluationResult> {
     return this.http.post<PredictionEvaluationResult>(`${this.baseUrl}/api/predictions/evaluate`, null);
   }
@@ -170,6 +180,20 @@ export class StockApiService {
 
   getAffiliateStats(): Observable<AffiliateClickStat[]> {
     return this.http.get<AffiliateClickStat[]>(`${this.baseUrl}/api/affiliate/stats`);
+  }
+
+  getMonetizationStatus(): Observable<MonetizationStatus> {
+    return this.http.get<MonetizationStatus>(`${this.baseUrl}/api/monetization/status`, {
+      headers: this.workspaceHeaders(),
+    });
+  }
+
+  startCheckout(planKey: 'pro' | 'power', successUrl: string, cancelUrl: string): Observable<CheckoutResponse> {
+    return this.http.post<CheckoutResponse>(`${this.baseUrl}/api/monetization/checkout`, {
+      planKey,
+      successUrl,
+      cancelUrl,
+    });
   }
 
   private workspaceHeaders(): Record<string, string> { return { 'X-Client-ID': this.identity.id }; }
