@@ -1,14 +1,27 @@
 using StockAnalyzer.Application.Abstractions;
 using StockAnalyzer.Application.DTOs;
 using StockAnalyzer.Domain.Monetization;
+using System.Text.Json;
 
 namespace StockAnalyzer.Application.Services;
 
 public sealed class MonetizationService(
     IUsageRepository usageRepository,
     ISubscriptionRepository subscriptionRepository,
+    IMonetizationEventRepository eventRepository,
     IPaymentProvider paymentProvider) : IMonetizationService
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly HashSet<string> AllowedEvents = new(StringComparer.Ordinal)
+    {
+        "quota_callout_view",
+        "quota_callout_click",
+        "checkout_start",
+        "checkout_created",
+        "checkout_failed",
+        "paid_feature_attempt"
+    };
+
     private static readonly IReadOnlyList<PlanDefinition> Plans =
     [
         new(
@@ -139,6 +152,55 @@ public sealed class MonetizationService(
                 : Math.Max(0, check.DailyLimit.Value - check.UsedToday - normalizedQuantity),
             Message = "Usage recorded."
         };
+    }
+
+    public async Task<MonetizationEventResponseDto> RecordEventAsync(
+        Guid? userId,
+        string clientId,
+        MonetizationEventRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        var normalizedClientId = ValidateClientId(clientId);
+        var eventName = NormalizeEventName(request.EventName);
+        var source = NormalizeSource(request.Source);
+        var featureKey = string.IsNullOrWhiteSpace(request.FeatureKey)
+            ? null
+            : NormalizeFeature(request.FeatureKey);
+        var planKey = string.IsNullOrWhiteSpace(request.PlanKey)
+            ? null
+            : SubscriptionPlan.Normalize(request.PlanKey);
+        var metadata = NormalizeMetadata(request.Metadata);
+
+        await eventRepository.AddAsync(new MonetizationEvent
+        {
+            UserId = userId,
+            ClientId = normalizedClientId,
+            EventName = eventName,
+            Source = source,
+            FeatureKey = featureKey,
+            PlanKey = planKey,
+            MetadataJson = JsonSerializer.Serialize(metadata, JsonOptions)
+        }, cancellationToken);
+
+        return new MonetizationEventResponseDto(eventName, "Event recorded.");
+    }
+
+    public async Task<StoredLimitCheckDto> CheckStoredLimitAsync(
+        Guid? userId,
+        string clientId,
+        string featureKey,
+        int requestedTotal,
+        CancellationToken cancellationToken)
+    {
+        var normalizedFeature = NormalizeFeature(featureKey);
+        var normalizedTotal = ValidateStoredTotal(requestedTotal);
+        ValidateClientId(clientId);
+        var subscription = userId.HasValue
+            ? await subscriptionRepository.GetCurrentForUserAsync(userId.Value, cancellationToken)
+            : null;
+        var plan = ResolvePlan(subscription);
+        var limit = FindLimit(plan, normalizedFeature);
+        return BuildStoredCheck(plan, limit, normalizedTotal);
     }
 
     public async Task<CheckoutResponseDto> StartCheckoutAsync(
@@ -284,7 +346,12 @@ public sealed class MonetizationService(
             ? null
             : Math.Max(0, limit.DailyLimit.Value - usedToday);
         var allowed = limit.DailyLimit is null || usedToday + quantity <= limit.DailyLimit.Value;
-        var upgradePlan = allowed ? null : NextPlan(plan.Key, limit.FeatureKey);
+        var upgradePlan = allowed
+            ? null
+            : NextPlan(
+                plan.Key,
+                limit.FeatureKey,
+                candidate => candidate.DailyLimit is null || candidate.DailyLimit > 0);
         var message = allowed
             ? "Feature is available for the current plan."
             : upgradePlan is null
@@ -298,6 +365,34 @@ public sealed class MonetizationService(
             usedToday,
             limit.DailyLimit,
             remaining,
+            allowed,
+            upgradePlan,
+            message);
+    }
+
+    private static StoredLimitCheckDto BuildStoredCheck(
+        PlanDefinition plan,
+        PlanLimit limit,
+        int requestedTotal)
+    {
+        var allowed = limit.StoredLimit is null || requestedTotal <= limit.StoredLimit.Value;
+        var upgradePlan = allowed
+            ? null
+            : NextPlan(
+                plan.Key,
+                limit.FeatureKey,
+                candidate => candidate.StoredLimit is null || requestedTotal <= candidate.StoredLimit.Value);
+        var message = allowed
+            ? "Stored feature limit is available for the current plan."
+            : upgradePlan is null
+                ? "This plan limit has been reached."
+                : $"This plan limit has been reached. Upgrade to {PlansByKey[upgradePlan].Name} for higher limits.";
+        return new StoredLimitCheckDto(
+            limit.FeatureKey,
+            limit.Label,
+            plan.Key,
+            requestedTotal,
+            limit.StoredLimit,
             allowed,
             upgradePlan,
             message);
@@ -323,13 +418,13 @@ public sealed class MonetizationService(
         plan.Limits.SingleOrDefault(limit => limit.FeatureKey == featureKey)
         ?? throw new ArgumentException("Unknown monetized feature.", nameof(featureKey));
 
-    private static string? NextPlan(string currentPlan, string featureKey)
+    private static string? NextPlan(string currentPlan, string featureKey, Func<PlanLimit, bool> accepts)
     {
         var currentIndex = Plans.ToList().FindIndex(plan => plan.Key == currentPlan);
         foreach (var plan in Plans.Skip(currentIndex + 1))
         {
             var limit = plan.Limits.Single(item => item.FeatureKey == featureKey);
-            if (limit.DailyLimit is null || limit.DailyLimit > 0)
+            if (accepts(limit))
             {
                 return plan.Key;
             }
@@ -349,8 +444,58 @@ public sealed class MonetizationService(
         return normalized;
     }
 
+    private static string NormalizeEventName(string eventName)
+    {
+        var normalized = NormalizeToken(eventName, "Event name", 3, 80);
+        if (!AllowedEvents.Contains(normalized))
+        {
+            throw new ArgumentException("Analytics event is not supported.", nameof(eventName));
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeSource(string source) =>
+        NormalizeToken(source, "Event source", 3, 80);
+
+    private static string NormalizeToken(string value, string label, int minLength, int maxLength)
+    {
+        var normalized = (value ?? string.Empty).Trim().ToLowerInvariant();
+        if (normalized.Length < minLength ||
+            normalized.Length > maxLength ||
+            normalized.Any(ch => !char.IsLetterOrDigit(ch) && ch != '_' && ch != '-'))
+        {
+            throw new ArgumentException($"{label} is invalid.", nameof(value));
+        }
+
+        return normalized;
+    }
+
+    private static IReadOnlyDictionary<string, string> NormalizeMetadata(IReadOnlyDictionary<string, string>? metadata)
+    {
+        if (metadata is null || metadata.Count == 0)
+        {
+            return new Dictionary<string, string>();
+        }
+
+        return metadata
+            .Take(10)
+            .Select(pair => new
+            {
+                Key = NormalizeToken(pair.Key, "Metadata key", 1, 40),
+                Value = (pair.Value ?? string.Empty).Trim()[..Math.Min((pair.Value ?? string.Empty).Trim().Length, 120)]
+            })
+            .Where(pair => pair.Value.Length > 0)
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+    }
+
     private static int ValidateQuantity(int quantity) =>
         quantity is >= 1 and <= 100 ? quantity : throw new ArgumentException("Quantity must be between 1 and 100.", nameof(quantity));
+
+    private static int ValidateStoredTotal(int requestedTotal) =>
+        requestedTotal is >= 0 and <= 1_000
+            ? requestedTotal
+            : throw new ArgumentException("Stored total must be between 0 and 1000.", nameof(requestedTotal));
 
     private static string ValidateClientId(string clientId) =>
         Guid.TryParse(clientId, out var id) ? id.ToString() : throw new ArgumentException("X-Client-ID must be a valid UUID.", nameof(clientId));

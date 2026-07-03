@@ -1,12 +1,12 @@
 import { fakeAsync, TestBed, tick } from '@angular/core/testing';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { PortfolioService } from './portfolio.service';
 import { StockApiService } from './stock-api.service';
 
 describe('PortfolioService', () => {
   beforeEach(() => {
     localStorage.clear(); TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [{ provide: StockApiService, useValue: { getWorkspacePortfolio: () => of([]), saveWorkspacePortfolio: (items: unknown) => of(items) } }] });
+    TestBed.configureTestingModule({ providers: [{ provide: StockApiService, useValue: { getWorkspacePortfolio: () => of([]), saveWorkspacePortfolio: (items: unknown) => of(items), recordMonetizationEvent: () => of({ eventName: 'test', message: 'ok' }) } }] });
   });
 
   it('adds a normalized holding and persists it', () => {
@@ -36,6 +36,7 @@ describe('PortfolioService', () => {
         useValue: {
           getWorkspacePortfolio: () => of([]),
           saveWorkspacePortfolio: () => (++saveCalls === 1 ? firstSave : secondSave).asObservable(),
+          recordMonetizationEvent: () => of({ eventName: 'test', message: 'ok' }),
         },
       }],
     });
@@ -51,5 +52,22 @@ describe('PortfolioService', () => {
 
     secondSave.next(service.holdings());
     expect(service.syncState()).toBe('synced');
+  }));
+
+  it('rolls back optimistic holdings when the backend reports a portfolio quota limit', fakeAsync(() => {
+    const api = TestBed.inject(StockApiService) as jasmine.SpyObj<StockApiService>;
+    api.saveWorkspacePortfolio = jasmine.createSpy('saveWorkspacePortfolio').and.returnValue(throwError(() => ({
+      status: 402,
+      error: { detail: 'This plan limit has been reached. Upgrade to Pro for higher limits.' },
+    })));
+    const service = TestBed.inject(PortfolioService);
+
+    service.add({ ticker: 'AAPL', quantity: 1, averageCost: 150, purchasedAt: '', note: '' });
+    tick(150);
+
+    expect(service.holdings()).toEqual([]);
+    expect(service.quotaExceeded()).toBeTrue();
+    expect(service.quotaMessage()).toContain('Upgrade to Pro');
+    expect(service.syncState()).toBe('blocked');
   }));
 });

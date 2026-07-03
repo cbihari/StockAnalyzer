@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<IAiExplanationRepository, AiExplanationRepository>();
         services.AddScoped<IAffiliateClickRepository, AffiliateClickRepository>();
         services.AddScoped<IUsageRepository, UsageRepository>();
+        services.AddScoped<IMonetizationEventRepository, MonetizationEventRepository>();
         services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
         services.AddSingleton<IPaymentProvider, ManualPaymentProvider>();
         services.AddSingleton<IMarketDataProviderInfo, MarketDataProviderInfo>();

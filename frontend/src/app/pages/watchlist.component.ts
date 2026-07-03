@@ -18,6 +18,12 @@ import { AlertDraft, AlertFrequency, AlertService, AlertType } from '../core/ale
         <a class="secondary-button link-button" routerLink="/search">Add stocks</a>
       </div>
       <div class="watchlist-note notice"><strong>{{ syncLabel() }}</strong> {{ watchlist.syncState() === 'offline' ? 'Changes remain cached in this browser and will sync when the API returns.' : 'This anonymous workspace is persisted in PostgreSQL and cached in this browser.' }}</div>
+      @if (watchlist.quotaExceeded()) {
+        <div class="notice warning" role="alert"><span>{{ watchlist.quotaMessage() }}</span> <a class="secondary-button" routerLink="/upgrade" (click)="trackUpgradeClick('watchlist_item')">View plans</a></div>
+      }
+      @if (alerts.quotaExceeded()) {
+        <div class="notice warning" role="alert"><span>{{ alerts.quotaMessage() }}</span> <a class="secondary-button" routerLink="/upgrade" (click)="trackUpgradeClick('alert_rule')">View plans</a></div>
+      }
       @if (availableTags().length) {
         <div class="watchlist-filters" aria-label="Filter watchlist by tag"><span>Filter</span><button type="button" [class.active]="!activeTag()" (click)="activeTag.set('')">All</button>@for (tag of availableTags(); track tag) { <button type="button" [class.active]="activeTag() === tag" (click)="activeTag.set(tag)">#{{ tag }}</button> }</div>
       }
@@ -112,5 +118,12 @@ export class WatchlistComponent implements OnInit {
     const draft: AlertDraft = { type: this.alertType, threshold: this.alertThreshold, frequency: this.alertFrequency, cooldownHours: this.alertCooldown, quietStart: this.quietStart, quietEnd: this.quietEnd };
     this.alerts.add(ticker, draft); this.alertThreshold = this.quotes().find((item) => item.symbol === ticker)?.price ?? 0;
   }
-  syncLabel(): string { return this.watchlist.syncState() === 'synced' ? 'Workspace synced.' : this.watchlist.syncState() === 'syncing' ? 'Syncing workspace...' : this.watchlist.syncState() === 'offline' ? 'Offline mode.' : 'Local workspace.'; }
+  trackUpgradeClick(featureKey: 'watchlist_item' | 'alert_rule'): void {
+    this.api.recordMonetizationEvent({
+      eventName: 'quota_callout_click',
+      source: 'watchlist',
+      featureKey,
+    }).subscribe({ error: () => undefined });
+  }
+  syncLabel(): string { return this.watchlist.syncState() === 'synced' ? 'Workspace synced.' : this.watchlist.syncState() === 'syncing' ? 'Syncing workspace...' : this.watchlist.syncState() === 'offline' ? 'Offline mode.' : this.watchlist.syncState() === 'blocked' ? 'Plan limit reached.' : 'Local workspace.'; }
 }

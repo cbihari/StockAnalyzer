@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { AiExplanationResponse } from '../core/models';
 import { PredictionHistoryService } from '../core/prediction-history.service';
 import { StockApiService } from '../core/stock-api.service';
@@ -10,11 +10,14 @@ import { StockDetailComponent } from './stock-detail.component';
 describe('StockDetailComponent AI explanation', () => {
   let response$: Subject<AiExplanationResponse>;
   let component: StockDetailComponent;
-  let api: { generateAiExplanation: jasmine.Spy };
+  let api: { generateAiExplanation: jasmine.Spy; recordMonetizationEvent: jasmine.Spy };
 
   beforeEach(() => {
     response$ = new Subject<AiExplanationResponse>();
-    api = { generateAiExplanation: jasmine.createSpy('generateAiExplanation').and.returnValue(response$) };
+    api = {
+      generateAiExplanation: jasmine.createSpy('generateAiExplanation').and.returnValue(response$),
+      recordMonetizationEvent: jasmine.createSpy('recordMonetizationEvent').and.returnValue(of({ eventName: 'test', message: 'ok' })),
+    };
     TestBed.configureTestingModule({
       imports: [StockDetailComponent],
       providers: [
@@ -59,6 +62,10 @@ describe('StockDetailComponent AI explanation', () => {
     expect(component.aiLoading()).toBeFalse();
     expect(component.aiQuotaExceeded()).toBeTrue();
     expect(component.aiError()).toContain('Upgrade to Pro');
+    expect(api.recordMonetizationEvent).toHaveBeenCalledWith(jasmine.objectContaining({
+      eventName: 'paid_feature_attempt',
+      featureKey: 'ai_explanation',
+    }));
   });
 
   it('clears quota state before retrying an explanation', () => {

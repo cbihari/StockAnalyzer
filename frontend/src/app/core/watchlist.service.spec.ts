@@ -1,12 +1,12 @@
 import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { WatchlistService } from './watchlist.service';
 import { StockApiService } from './stock-api.service';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 describe('WatchlistService', () => {
   beforeEach(() => {
     localStorage.clear(); TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [{ provide: StockApiService, useValue: { getWorkspaceWatchlist: () => of([]), saveWorkspaceWatchlist: (items: unknown) => of(items) } }] });
+    TestBed.configureTestingModule({ providers: [{ provide: StockApiService, useValue: { getWorkspaceWatchlist: () => of([]), saveWorkspaceWatchlist: (items: unknown) => of(items), recordMonetizationEvent: () => of({ eventName: 'test', message: 'ok' }) } }] });
   });
 
   it('migrates the legacy ticker list into structured items', () => {
@@ -39,6 +39,23 @@ describe('WatchlistService', () => {
     expect(api.saveWorkspaceWatchlist).toHaveBeenCalledWith(service.items());
   }));
 
+  it('rolls back optimistic additions when the backend reports a watchlist quota limit', fakeAsync(() => {
+    const api = TestBed.inject(StockApiService) as jasmine.SpyObj<StockApiService>;
+    api.saveWorkspaceWatchlist = jasmine.createSpy('saveWorkspaceWatchlist').and.returnValue(throwError(() => ({
+      status: 402,
+      error: { detail: 'This plan limit has been reached. Upgrade to Pro for higher limits.' },
+    })));
+    const service = TestBed.inject(WatchlistService);
+
+    service.toggle('TSLA');
+    tick(150);
+
+    expect(service.has('TSLA')).toBeFalse();
+    expect(service.quotaExceeded()).toBeTrue();
+    expect(service.quotaMessage()).toContain('Upgrade to Pro');
+    expect(service.syncState()).toBe('blocked');
+  }));
+
   it('does not let late hydration overwrite local edits', fakeAsync(() => {
     const remote = new Subject<unknown[]>();
     TestBed.resetTestingModule();
@@ -49,6 +66,7 @@ describe('WatchlistService', () => {
         useValue: {
           getWorkspaceWatchlist: () => remote.asObservable(),
           saveWorkspaceWatchlist: (items: unknown) => of(items),
+          recordMonetizationEvent: () => of({ eventName: 'test', message: 'ok' }),
         },
       }],
     });

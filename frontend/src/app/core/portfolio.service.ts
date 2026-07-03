@@ -5,6 +5,8 @@ import { normalizeTicker } from './ticker-validation';
 
 const STORAGE_KEY = 'stock-analyzer-portfolio-v1';
 const SYNC_DEBOUNCE_MS = 150;
+const LOCAL_STORAGE_HOLDING_CAP = 200;
+type PortfolioSyncState = 'local' | 'syncing' | 'synced' | 'offline' | 'blocked';
 
 export interface PortfolioHoldingDraft {
   ticker: string;
@@ -21,7 +23,10 @@ export class PortfolioService {
   private saveVersion = 0;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   readonly holdings = signal<PortfolioHolding[]>(this.load());
-  readonly syncState = signal<'local' | 'syncing' | 'synced' | 'offline'>('local');
+  private lastPersistedHoldings = this.holdings();
+  readonly syncState = signal<PortfolioSyncState>('local');
+  readonly quotaExceeded = signal(false);
+  readonly quotaMessage = signal('');
 
   constructor() { this.hydrate(); }
 
@@ -30,7 +35,7 @@ export class PortfolioService {
       id: crypto.randomUUID(), ticker: normalizeTicker(draft.ticker), quantity: draft.quantity,
       average_cost: draft.averageCost, purchased_at: draft.purchasedAt || null, note: draft.note.trim().slice(0, 300),
     };
-    this.set([...this.holdings(), holding].slice(0, 50));
+    this.set([...this.holdings(), holding]);
   }
 
   remove(id: string): void { this.set(this.holdings().filter((holding) => holding.id !== id)); }
@@ -48,7 +53,12 @@ export class PortfolioService {
           this.scheduleSync();
           return;
         }
-        if (remote.length) { this.holdings.set(remote); this.persist(remote); this.syncState.set('synced'); }
+        if (remote.length) {
+          this.holdings.set(remote);
+          this.lastPersistedHoldings = remote;
+          this.persist(remote);
+          this.syncState.set('synced');
+        }
         else if (this.holdings().length) this.scheduleSync();
         else this.syncState.set('synced');
       },
@@ -56,7 +66,13 @@ export class PortfolioService {
     });
   }
 
-  private set(holdings: PortfolioHolding[]): void { this.localVersion++; this.holdings.set(holdings); this.persist(holdings); this.scheduleSync(); }
+  private set(holdings: PortfolioHolding[]): void {
+    this.localVersion++;
+    this.clearQuotaState();
+    this.holdings.set(holdings);
+    this.persist(holdings);
+    this.scheduleSync();
+  }
   private scheduleSync(): void {
     if (this.saveTimer) clearTimeout(this.saveTimer);
     this.saveTimer = setTimeout(() => {
@@ -71,15 +87,42 @@ export class PortfolioService {
       next: (saved) => {
         if (requestVersion === this.saveVersion && version === this.localVersion) {
           this.holdings.set(saved);
+          this.lastPersistedHoldings = saved;
           this.persist(saved);
+          this.clearQuotaState();
           this.syncState.set('synced');
         }
       },
-      error: () => {
-        if (requestVersion === this.saveVersion) this.syncState.set('offline');
+      error: (error) => {
+        if (requestVersion === this.saveVersion && version === this.localVersion) {
+          if (error.status === 402) {
+            this.quotaExceeded.set(true);
+            this.quotaMessage.set(error.error?.detail ?? 'Your current plan has reached the portfolio holding limit.');
+            this.trackQuotaBlocked();
+            this.holdings.set(this.lastPersistedHoldings);
+            this.persist(this.lastPersistedHoldings);
+            this.syncState.set('blocked');
+            return;
+          }
+          this.syncState.set('offline');
+        }
       },
     });
   }
   private persist(holdings: PortfolioHolding[]): void { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(holdings)); } catch { /* Offline cache is optional. */ } }
-  private load(): PortfolioHolding[] { try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]'); return Array.isArray(value) ? value.slice(0, 50) : []; } catch { return []; } }
+  private load(): PortfolioHolding[] { try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]'); return Array.isArray(value) ? value.slice(0, LOCAL_STORAGE_HOLDING_CAP) : []; } catch { return []; } }
+  private clearQuotaState(): void { this.quotaExceeded.set(false); this.quotaMessage.set(''); }
+  private trackQuotaBlocked(): void {
+    this.api.recordMonetizationEvent({
+      eventName: 'paid_feature_attempt',
+      source: 'portfolio',
+      featureKey: 'portfolio_holding',
+      metadata: { result: 'quota_blocked' },
+    }).subscribe({ error: () => undefined });
+    this.api.recordMonetizationEvent({
+      eventName: 'quota_callout_view',
+      source: 'portfolio',
+      featureKey: 'portfolio_holding',
+    }).subscribe({ error: () => undefined });
+  }
 }

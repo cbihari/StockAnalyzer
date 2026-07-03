@@ -20,5 +20,6 @@ export const routes: Routes = [
   { path: 'signup', loadComponent: () => import('./auth/signup.component').then((m) => m.SignupComponent) },
   { path: 'auth/callback', loadComponent: () => import('./auth/auth-callback.component').then((m) => m.AuthCallbackComponent) },
   { path: 'admin/affiliate-stats', loadComponent: () => import('./pages/affiliate-stats.component').then((m) => m.AffiliateStatsComponent) },
+  { path: 'admin/monetization-funnel', loadComponent: () => import('./pages/monetization-funnel.component').then((m) => m.MonetizationFunnelComponent) },
   { path: '**', redirectTo: '' },
 ];

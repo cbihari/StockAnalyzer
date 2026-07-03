@@ -2,7 +2,7 @@ import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { AffiliateClickStat, AffiliatePartner, AiExplanationResponse, AiResearchResponse, CheckoutResponse, HistoricalPrice, IndicatorResponse, MarketOverview, MonetizationStatus, MlPrediction, ModelTrainingJob, ModelTrainingResult, ModelVersionsResponse, PortfolioHolding, PortfolioSummary, PredictionEvaluationResult, PredictionHistoryResponse, StockAnalysis, StockComparison, StockNews, StockQuotesResponse, StockSuggestion, TickerModelMetrics, WorkspaceAlertState, WorkspaceWatchlistItem } from './models';
+import { AffiliateClickStat, AffiliatePartner, AiExplanationResponse, AiResearchResponse, CheckoutResponse, HistoricalPrice, IndicatorResponse, MarketOverview, MonetizationEventRequest, MonetizationEventResponse, MonetizationFunnelReport, MonetizationStatus, MlPrediction, ModelTrainingJob, ModelTrainingResult, ModelVersionsResponse, PortfolioHolding, PortfolioSummary, PredictionEvaluationResult, PredictionHistoryResponse, StockAnalysis, StockComparison, StockNews, StockQuotesResponse, StockSuggestion, TickerModelMetrics, WorkspaceAlertState, WorkspaceWatchlistItem } from './models';
 import { ClientIdentityService } from './client-identity.service';
 
 @Injectable({ providedIn: 'root' })
@@ -193,6 +193,28 @@ export class StockApiService {
       planKey,
       successUrl,
       cancelUrl,
+    });
+  }
+
+  recordMonetizationEvent(request: MonetizationEventRequest): Observable<MonetizationEventResponse> {
+    return this.http.post<MonetizationEventResponse>(
+      `${this.baseUrl}/api/monetization/events`,
+      request,
+      { headers: this.workspaceHeaders() },
+    );
+  }
+
+  getMonetizationFunnel(days = 30): Observable<MonetizationFunnelReport> {
+    return this.http.get<MonetizationFunnelReport>(`${this.baseUrl}/api/monetization/events/funnel`, {
+      params: new HttpParams().set('days', days),
+    });
+  }
+
+  exportMonetizationFunnelCsv(days = 30): Observable<HttpResponse<Blob>> {
+    return this.http.get(`${this.baseUrl}/api/monetization/events/funnel/export`, {
+      observe: 'response',
+      params: new HttpParams().set('days', days),
+      responseType: 'blob',
     });
   }
 

@@ -154,17 +154,23 @@ export class UpgradeComponent implements OnInit {
 
   startCheckout(plan: SubscriptionPlan): void {
     if (plan.key === 'free' || !this.auth.authenticated()) return;
+    const planKey = plan.key;
     this.checkoutLoading.set(plan.key);
     this.message.set('');
+    this.trackCheckoutEvent('checkout_start', planKey);
     const origin = window.location.origin;
-    this.api.startCheckout(plan.key, `${origin}/upgrade?checkout=success`, `${origin}/upgrade?checkout=cancelled`)
+    this.api.startCheckout(planKey, `${origin}/upgrade?checkout=success`, `${origin}/upgrade?checkout=cancelled`)
       .pipe(finalize(() => this.checkoutLoading.set('')))
       .subscribe({
         next: (response) => {
+          this.trackCheckoutEvent('checkout_created', planKey, response.provider);
           this.message.set(response.message);
           window.location.assign(response.checkoutUrl);
         },
-        error: (error) => this.message.set(error.error?.detail ?? 'Checkout could not be started.'),
+        error: (error) => {
+          this.trackCheckoutEvent('checkout_failed', planKey);
+          this.message.set(error.error?.detail ?? 'Checkout could not be started.');
+        },
       });
   }
 
@@ -203,5 +209,14 @@ export class UpgradeComponent implements OnInit {
     if (limit.dailyLimit !== null) return `${limit.dailyLimit} ${limit.label.toLowerCase()} per day`;
     if (limit.storedLimit !== null) return `${limit.storedLimit} ${limit.label.toLowerCase()}`;
     return limit.label;
+  }
+
+  private trackCheckoutEvent(eventName: 'checkout_start' | 'checkout_created' | 'checkout_failed', planKey: 'pro' | 'power', provider = ''): void {
+    this.api.recordMonetizationEvent({
+      eventName,
+      source: 'upgrade',
+      planKey,
+      metadata: provider ? { provider } : undefined,
+    }).subscribe({ error: () => undefined });
   }
 }

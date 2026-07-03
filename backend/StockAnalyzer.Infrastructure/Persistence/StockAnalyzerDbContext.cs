@@ -19,6 +19,7 @@ public sealed class StockAnalyzerDbContext(DbContextOptions<StockAnalyzerDbConte
     public DbSet<AiExplanation> AiExplanations => Set<AiExplanation>();
     public DbSet<AffiliateClick> AffiliateClicks => Set<AffiliateClick>();
     public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();
+    public DbSet<MonetizationEvent> MonetizationEvents => Set<MonetizationEvent>();
     public DbSet<UserSubscription> UserSubscriptions => Set<UserSubscription>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

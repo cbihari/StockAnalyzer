@@ -258,8 +258,47 @@ Seventh development slice:
 - The prediction history page calls the backend export endpoint and shows an
   upgrade prompt when quota is exhausted.
 
-Next development slice: enforce and surface quota boundaries for saved alert
-rules or watchlist size.
+Eighth development slice:
+
+- Watchlist saves now check the `watchlist_item` stored limit before persistence.
+- Alert state saves now check the `alert_rule` stored limit before persistence.
+- The watchlist page rolls back optimistic local additions when the API returns
+  `402 Plan limit reached` and links users to `/upgrade`.
+
+Ninth development slice:
+
+- Portfolio saves now check the `portfolio_holding` stored limit before
+  persistence.
+- The portfolio page rolls back optimistic local additions when the API returns
+  `402 Plan limit reached` and links users to `/upgrade`.
+- Frontend holding count display is no longer hardcoded to a single plan limit.
+
+Tenth development slice:
+
+- Added `MonetizationEvents` for bounded first-party funnel analytics.
+- Added `POST /api/monetization/events` for approved quota, checkout, and
+  paid-feature attempt events.
+- Quota callout views/clicks are tracked for AI explanations, CSV exports,
+  watchlist size, alert rules, and portfolio holdings.
+- Checkout start/create/fail events are tracked from the upgrade page.
+
+Eleventh development slice:
+
+- Added admin-only `GET /api/monetization/events/funnel`.
+- Added `/admin/monetization-funnel` to review aggregate event counts and
+  source/feature/plan breakdowns.
+- Funnel reporting is gated by `MONETIZATION_ADMIN_ENABLED` and the existing
+  admin claim/role policy.
+
+Twelfth development slice:
+
+- Added admin-only `GET /api/monetization/events/funnel/export`.
+- Added CSV export from `/admin/monetization-funnel` using the same enabled flag
+  and admin policy as the report page.
+- Export includes event totals and source/feature/plan breakdown rows.
+
+Next development slice: wire a real payment provider such as Razorpay/Stripe
+behind `IPaymentProvider`, or add trend charts for admin funnel reports.
 
 ## Product Metrics
 

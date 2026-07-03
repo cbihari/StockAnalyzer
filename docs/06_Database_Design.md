@@ -12,6 +12,7 @@ erDiagram
     AspNetUsers ||--o| GuestWorkspaces : claims
     AspNetUsers ||--o{ Predictions : owns
     AspNetUsers ||--o{ UsageEvents : owns
+    AspNetUsers ||--o{ MonetizationEvents : owns
     AspNetUsers ||--o{ UserSubscriptions : owns
 
     Stocks {
@@ -76,6 +77,17 @@ erDiagram
         int Quantity
         datetime CreatedAt
     }
+    MonetizationEvents {
+        uuid Id PK
+        uuid UserId FK
+        string ClientId
+        string EventName
+        string Source
+        string FeatureKey
+        string PlanKey
+        jsonb MetadataJson
+        datetime OccurredAt
+    }
     UserSubscriptions {
         uuid Id PK
         uuid UserId FK
@@ -105,6 +117,7 @@ erDiagram
 | `GuestWorkspaces` | Browser/user workspace data as JSONB. | `ClientId`, unique `UserId`. |
 | `AffiliateClicks` | Broker click events. | `(Broker, ClickedAt)`. |
 | `UsageEvents` | Daily monetized feature usage for anonymous workspaces and signed-in users. | `(ClientId, FeatureKey, UsageDate)`, `(UserId, FeatureKey, UsageDate)`. |
+| `MonetizationEvents` | Bounded first-party analytics for quota callouts, paid-feature attempts, and checkout events. | `(EventName, OccurredAt)`, `(ClientId, OccurredAt)`, `(UserId, OccurredAt)`. |
 | `UserSubscriptions` | Payment-provider subscription state used for paid plan resolution. | `UserId`, `ProviderCheckoutSessionId`. |
 | `AspNet*` | ASP.NET Core Identity users, roles, claims, logins, tokens. | Identity defaults plus configured user fields. |
 

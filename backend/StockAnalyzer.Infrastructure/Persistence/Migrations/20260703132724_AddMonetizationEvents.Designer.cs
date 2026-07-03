@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using StockAnalyzer.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using StockAnalyzer.Infrastructure.Persistence;
 namespace StockAnalyzer.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(StockAnalyzerDbContext))]
-    partial class StockAnalyzerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260703132724_AddMonetizationEvents")]
+    partial class AddMonetizationEvents
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -16,11 +16,24 @@ public interface IMonetizationService
         int quantity,
         CancellationToken cancellationToken);
 
+    Task<StoredLimitCheckDto> CheckStoredLimitAsync(
+        Guid? userId,
+        string clientId,
+        string featureKey,
+        int requestedTotal,
+        CancellationToken cancellationToken);
+
     Task<UsageCheckDto> RecordAsync(
         Guid? userId,
         string clientId,
         string featureKey,
         int quantity,
+        CancellationToken cancellationToken);
+
+    Task<MonetizationEventResponseDto> RecordEventAsync(
+        Guid? userId,
+        string clientId,
+        MonetizationEventRequestDto request,
         CancellationToken cancellationToken);
 
     Task<CheckoutResponseDto> StartCheckoutAsync(

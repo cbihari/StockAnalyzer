@@ -2,14 +2,14 @@ import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { AlertService } from './alert.service';
 import { MarketInstrument } from './models';
 import { StockApiService } from './stock-api.service';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 const quote: MarketInstrument = { symbol: 'AAPL', name: 'Apple', price: 200, change: 4, change_percent: .02, day_high: 201, day_low: 194, volume: 1, sparkline: [] };
 
 describe('AlertService', () => {
   beforeEach(() => {
     localStorage.clear(); TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [{ provide: StockApiService, useValue: { getWorkspaceAlerts: () => of({ rules: [], notifications: [] }), saveWorkspaceAlerts: (state: unknown) => of(state) } }] });
+    TestBed.configureTestingModule({ providers: [{ provide: StockApiService, useValue: { getWorkspaceAlerts: () => of({ rules: [], notifications: [] }), saveWorkspaceAlerts: (state: unknown) => of(state), recordMonetizationEvent: () => of({ eventName: 'test', message: 'ok' }) } }] });
   });
 
   it('triggers a matching price rule and disables once-only alerts', () => {
@@ -38,5 +38,22 @@ describe('AlertService', () => {
 
     expect(api.saveWorkspaceAlerts).toHaveBeenCalledTimes(1);
     expect(api.saveWorkspaceAlerts).toHaveBeenCalledWith({ rules: service.rules(), notifications: service.notifications() });
+  }));
+
+  it('rolls back optimistic alert rules when the backend reports an alert quota limit', fakeAsync(() => {
+    const api = TestBed.inject(StockApiService) as jasmine.SpyObj<StockApiService>;
+    api.saveWorkspaceAlerts = jasmine.createSpy('saveWorkspaceAlerts').and.returnValue(throwError(() => ({
+      status: 402,
+      error: { detail: 'This plan limit has been reached. Upgrade to Pro for higher limits.' },
+    })));
+    const service = TestBed.inject(AlertService);
+
+    service.add('AAPL', { type: 'price_above', threshold: 190, frequency: 'daily', cooldownHours: 24, quietStart: '', quietEnd: '' });
+    tick(150);
+
+    expect(service.rules()).toEqual([]);
+    expect(service.quotaExceeded()).toBeTrue();
+    expect(service.quotaMessage()).toContain('Upgrade to Pro');
+    expect(service.syncState()).toBe('blocked');
   }));
 });

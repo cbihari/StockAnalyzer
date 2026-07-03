@@ -481,3 +481,37 @@ export interface CheckoutResponse {
   providerSessionId: string;
   message: string;
 }
+
+export interface MonetizationEventRequest {
+  eventName: 'quota_callout_view' | 'quota_callout_click' | 'checkout_start' | 'checkout_created' | 'checkout_failed' | 'paid_feature_attempt';
+  source: string;
+  featureKey?: string | null;
+  planKey?: 'free' | 'pro' | 'power' | null;
+  metadata?: Record<string, string>;
+}
+
+export interface MonetizationEventResponse {
+  eventName: string;
+  message: string;
+}
+
+export interface MonetizationFunnelEvent {
+  eventName: string;
+  count: number;
+}
+
+export interface MonetizationFunnelBreakdown {
+  eventName: string;
+  source: string;
+  featureKey: string | null;
+  planKey: string | null;
+  count: number;
+}
+
+export interface MonetizationFunnelReport {
+  from: string;
+  to: string;
+  totalEvents: number;
+  events: MonetizationFunnelEvent[];
+  breakdown: MonetizationFunnelBreakdown[];
+}

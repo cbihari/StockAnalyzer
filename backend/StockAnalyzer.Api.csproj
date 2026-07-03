@@ -29,6 +29,18 @@
     <Compile Remove="StockAnalyzer.Domain/**/*.cs" />
     <Compile Remove="StockAnalyzer.Infrastructure/**/*.cs" />
     <Compile Remove="StockAnalyzer.Tests/**/*.cs" />
+    <Content Remove="StockAnalyzer.Application/**" />
+    <Content Remove="StockAnalyzer.Domain/**" />
+    <Content Remove="StockAnalyzer.Infrastructure/**" />
+    <Content Remove="StockAnalyzer.Tests/**" />
+    <EmbeddedResource Remove="StockAnalyzer.Application/**" />
+    <EmbeddedResource Remove="StockAnalyzer.Domain/**" />
+    <EmbeddedResource Remove="StockAnalyzer.Infrastructure/**" />
+    <EmbeddedResource Remove="StockAnalyzer.Tests/**" />
+    <None Remove="StockAnalyzer.Application/**" />
+    <None Remove="StockAnalyzer.Domain/**" />
+    <None Remove="StockAnalyzer.Infrastructure/**" />
+    <None Remove="StockAnalyzer.Tests/**" />
   </ItemGroup>
 
 </Project>

@@ -1,12 +1,18 @@
 using System.Text.Json;
 using StockAnalyzer.Application.Abstractions;
 using StockAnalyzer.Application.DTOs;
+using StockAnalyzer.Application.Exceptions;
 using StockAnalyzer.Domain.Stocks;
 
 namespace StockAnalyzer.Application.Services;
 
-public sealed class GuestWorkspaceService(IGuestWorkspaceRepository repository) : IGuestWorkspaceService
+public sealed class GuestWorkspaceService(
+    IGuestWorkspaceRepository repository,
+    IMonetizationService monetizationService) : IGuestWorkspaceService
 {
+    private const string WatchlistFeature = "watchlist_item";
+    private const string AlertRuleFeature = "alert_rule";
+    private const string PortfolioHoldingFeature = "portfolio_holding";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public async Task<IReadOnlyList<WorkspaceWatchlistItemDto>> GetWatchlistAsync(
@@ -26,7 +32,7 @@ public sealed class GuestWorkspaceService(IGuestWorkspaceRepository repository) 
         IReadOnlyList<WorkspaceWatchlistItemDto> items,
         CancellationToken cancellationToken)
     {
-        if (items.Count > 10) throw new ArgumentException("A guest watchlist supports up to 10 stocks.", nameof(items));
+        var normalizedClientId = ValidateClientId(clientId);
         var normalized = items.Select(item => new WorkspaceWatchlistItemDto(
             StockTicker.Create(item.Ticker).Value,
             DateTimeOffset.TryParse(item.AddedAt, out var addedAt) ? addedAt.ToUniversalTime().ToString("O") : DateTimeOffset.UtcNow.ToString("O"),
@@ -35,7 +41,18 @@ public sealed class GuestWorkspaceService(IGuestWorkspaceRepository repository) 
             .GroupBy(item => item.Ticker, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .ToArray();
-        await repository.SaveWatchlistAsync(userId, ValidateClientId(clientId), JsonSerializer.Serialize(normalized, JsonOptions), cancellationToken);
+        var quota = await monetizationService.CheckStoredLimitAsync(
+            userId,
+            normalizedClientId,
+            WatchlistFeature,
+            normalized.Length,
+            cancellationToken);
+        if (!quota.Allowed)
+        {
+            throw new PlanLimitExceededException(quota.Message);
+        }
+
+        await repository.SaveWatchlistAsync(userId, normalizedClientId, JsonSerializer.Serialize(normalized, JsonOptions), cancellationToken);
         return normalized;
     }
 
@@ -53,9 +70,21 @@ public sealed class GuestWorkspaceService(IGuestWorkspaceRepository repository) 
         WorkspaceAlertStateDto state,
         CancellationToken cancellationToken)
     {
-        if (state.Rules.Count > 50 || state.Notifications.Count > 100)
+        if (state.Notifications.Count > 100)
             throw new ArgumentException("Guest alert storage limits were exceeded.", nameof(state));
-        await repository.SaveAlertStateAsync(userId, ValidateClientId(clientId), JsonSerializer.Serialize(state, JsonOptions), cancellationToken);
+        var normalizedClientId = ValidateClientId(clientId);
+        var quota = await monetizationService.CheckStoredLimitAsync(
+            userId,
+            normalizedClientId,
+            AlertRuleFeature,
+            state.Rules.Count,
+            cancellationToken);
+        if (!quota.Allowed)
+        {
+            throw new PlanLimitExceededException(quota.Message);
+        }
+
+        await repository.SaveAlertStateAsync(userId, normalizedClientId, JsonSerializer.Serialize(state, JsonOptions), cancellationToken);
         return state;
     }
 
@@ -76,9 +105,7 @@ public sealed class GuestWorkspaceService(IGuestWorkspaceRepository repository) 
         IReadOnlyList<PortfolioHoldingDto> holdings,
         CancellationToken cancellationToken)
     {
-        if (holdings.Count > 50)
-            throw new ArgumentException("A guest portfolio supports up to 50 holdings.", nameof(holdings));
-
+        var normalizedClientId = ValidateClientId(clientId);
         var normalized = holdings.Select(holding =>
         {
             if (!double.IsFinite(holding.Quantity) || holding.Quantity <= 0)
@@ -93,10 +120,20 @@ public sealed class GuestWorkspaceService(IGuestWorkspaceRepository repository) 
                 DateOnly.TryParse(holding.PurchasedAt, out var purchasedAt) ? purchasedAt.ToString("O") : null,
                 (holding.Note ?? string.Empty).Trim()[..Math.Min((holding.Note ?? string.Empty).Trim().Length, 300)]);
         }).ToArray();
+        var quota = await monetizationService.CheckStoredLimitAsync(
+            userId,
+            normalizedClientId,
+            PortfolioHoldingFeature,
+            normalized.Length,
+            cancellationToken);
+        if (!quota.Allowed)
+        {
+            throw new PlanLimitExceededException(quota.Message);
+        }
 
         await repository.SavePortfolioAsync(
             userId,
-            ValidateClientId(clientId),
+            normalizedClientId,
             JsonSerializer.Serialize(normalized, JsonOptions),
             cancellationToken);
         return normalized;

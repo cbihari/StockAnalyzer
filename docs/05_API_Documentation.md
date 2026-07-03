@@ -34,9 +34,9 @@ Base URL:
 | POST | `/api/model/train/{ticker}/jobs?period=5y` | Queue background training job. |
 | GET | `/api/model/train/jobs/{jobId}` | Training job status. |
 | GET | `/api/model/versions/{ticker}` | Immutable model versions. |
-| GET/PUT | `/api/workspace/watchlist` | Guest/auth workspace watchlist. |
-| GET/PUT | `/api/workspace/alerts` | Guest/auth alert rules and notifications. |
-| GET/PUT | `/api/workspace/portfolio` | Guest/auth manual portfolio holdings. |
+| GET/PUT | `/api/workspace/watchlist` | Guest/auth workspace watchlist with `watchlist_item` stored-limit enforcement on save. |
+| GET/PUT | `/api/workspace/alerts` | Guest/auth alert rules and notifications with `alert_rule` stored-limit enforcement on save. |
+| GET/PUT | `/api/workspace/portfolio` | Guest/auth manual portfolio holdings with `portfolio_holding` stored-limit enforcement on save. |
 | GET | `/api/portfolio/summary` | Delayed valuation and allocation summary. |
 | GET | `/api/affiliate/partners` | Configured partner links. |
 | POST | `/api/affiliate/click` | Track broker click. |
@@ -44,6 +44,9 @@ Base URL:
 | GET | `/api/monetization/status` | Plan catalog and current workspace/user usage. |
 | GET | `/api/monetization/usage/check?featureKey=ai_explanation&quantity=1` | Check whether a feature has remaining quota. |
 | POST | `/api/monetization/usage` | Record usage for a monetized feature when quota is available. |
+| POST | `/api/monetization/events` | Record bounded first-party monetization analytics events. |
+| GET | `/api/monetization/events/funnel?days=30` | Admin aggregate report for monetization funnel events. |
+| GET | `/api/monetization/events/funnel/export?days=30` | Admin CSV export for monetization funnel events. |
 | POST | `/api/monetization/checkout` | Create an authenticated paid-plan checkout session. |
 | POST | `/api/monetization/webhooks/{provider}` | Process a payment-provider webhook and update subscription state. |
 | GET | `/api/auth/config` | Auth provider availability. |
@@ -144,3 +147,21 @@ consume quota. If the current plan has no remaining quota, the API returns
 `GET /api/predictions/history/export` checks and records the `csv_export` quota
 before returning `text/csv`. If quota is exhausted, it returns `402
 application/problem+json` with title `Plan limit reached`.
+
+`PUT /api/workspace/watchlist`, `PUT /api/workspace/alerts`, and
+`PUT /api/workspace/portfolio` check stored plan limits before saving. Watchlist
+saves use `watchlist_item`; alert-rule saves use `alert_rule`; portfolio saves
+use `portfolio_holding`. If the submitted state exceeds the current plan, the
+API returns `402 application/problem+json` and does not persist the oversized
+workspace state.
+
+`POST /api/monetization/events` records first-party monetization analytics for
+quota callout views/clicks, paid-feature attempts, and checkout start/create/fail
+events. Payloads are bounded to approved event names, feature keys, plan keys,
+source names, and short metadata values. Do not send ticker searches, personal
+notes, or arbitrary user prompts.
+
+`GET /api/monetization/events/funnel` and
+`GET /api/monetization/events/funnel/export` require the admin policy and
+`MONETIZATION_ADMIN_ENABLED=true` or the existing affiliate admin enable flag.
+They return aggregate event counts only; raw event payloads are not exposed.

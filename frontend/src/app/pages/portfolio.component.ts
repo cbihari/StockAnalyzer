@@ -15,15 +15,18 @@ import { TickerAutocompleteComponent } from '../shared/ticker-autocomplete.compo
     <main class="page portfolio-page">
       <div class="portfolio-heading"><div><p class="eyebrow">PORTFOLIO RESEARCH</p><h1>Understand what you own.</h1><p class="lead">Track manually entered holdings, performance, currency buckets, and concentration without connecting a brokerage account.</p></div><button type="button" class="secondary-button" [disabled]="loading()" (click)="loadSummary()">Refresh values</button></div>
       <div class="notice"><strong>{{ syncLabel() }}</strong> Holdings are stored in your anonymous PostgreSQL workspace with a browser cache.</div>
+      @if (portfolio.quotaExceeded()) {
+        <div class="notice warning" role="alert"><span>{{ portfolio.quotaMessage() }}</span> <a class="secondary-button" routerLink="/upgrade" (click)="trackUpgradeClick()">View plans</a></div>
+      }
       <form class="card holding-form" (ngSubmit)="addHolding()" novalidate>
-        <div class="section-title"><h2>Add a holding</h2><span>{{ portfolio.holdings().length }}/50 holdings</span></div>
+        <div class="section-title"><h2>Add a holding</h2><span>{{ portfolio.holdings().length }} holdings</span></div>
         <div class="holding-form-grid">
           <label>Ticker<app-ticker-autocomplete inputId="portfolio-ticker" ariaLabel="Holding ticker" [(value)]="ticker" (valueChange)="formError.set('')" /></label>
           <label>Quantity<input name="quantity" [(ngModel)]="quantity" type="number" min="0.000001" step="any" placeholder="Number of shares you own" required /></label>
           <label>Average cost<input name="averageCost" [(ngModel)]="averageCost" type="number" min="0.0001" step="any" placeholder="Price per share when you bought it" required /><small>Use the ticker's native currency</small></label>
           <label>Purchase date<input name="purchasedAt" [(ngModel)]="purchasedAt" type="date" /></label>
           <label class="holding-note-field">Research note<input name="note" [(ngModel)]="note" maxlength="300" placeholder="Why is this holding in the portfolio?" /></label>
-          <button type="submit" [disabled]="portfolio.holdings().length >= 50">Add holding</button>
+          <button type="submit">Add holding</button>
         </div>
         @if (formError()) { <p class="field-error" role="alert">{{ formError() }}</p> }
       </form>
@@ -79,7 +82,14 @@ export class PortfolioComponent {
 
   remove(id: string): void { this.portfolio.remove(id); }
   loadSummary(): void { this.loading.set(true); this.error.set(''); this.api.getPortfolioSummary().pipe(finalize(() => this.loading.set(false))).subscribe({ next: (summary) => this.summary.set(summary), error: (error) => this.error.set(error.error?.detail ?? 'Portfolio values could not be loaded.') }); }
-  syncLabel(): string { return this.portfolio.syncState() === 'synced' ? 'Portfolio synced.' : this.portfolio.syncState() === 'syncing' ? 'Syncing portfolio...' : this.portfolio.syncState() === 'offline' ? 'Offline mode.' : 'Local portfolio.'; }
+  trackUpgradeClick(): void {
+    this.api.recordMonetizationEvent({
+      eventName: 'quota_callout_click',
+      source: 'portfolio',
+      featureKey: 'portfolio_holding',
+    }).subscribe({ error: () => undefined });
+  }
+  syncLabel(): string { return this.portfolio.syncState() === 'synced' ? 'Portfolio synced.' : this.portfolio.syncState() === 'syncing' ? 'Syncing portfolio...' : this.portfolio.syncState() === 'offline' ? 'Offline mode.' : this.portfolio.syncState() === 'blocked' ? 'Plan limit reached.' : 'Local portfolio.'; }
   money(value: number, currency: string): string { return new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', { style: 'currency', currency, maximumFractionDigits: 2 }).format(value); }
   signedMoney(value: number, currency: string): string { return `${value > 0 ? '+' : ''}${this.money(value, currency)}`; }
 }

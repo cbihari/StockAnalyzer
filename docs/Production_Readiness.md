@@ -36,6 +36,7 @@ Known current strengths:
 | `GOOGLE_CLIENT_SECRET` | Optional | Enables Google sign-in only with non-placeholder secret pair. |
 | `AFFILIATE_ADMIN_ENABLED` | Optional | Keep false unless admin stats access is intentionally configured. |
 | `AFFILIATE_LINKS_CONFIG` | Optional | JSON partner list overriding appsettings affiliate links. |
+| `MONETIZATION_ADMIN_ENABLED` | Optional | Enables admin-only monetization funnel reporting. |
 
 ### FastAPI ML Service
 

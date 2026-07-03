@@ -35,7 +35,7 @@ import { InfoTipComponent } from '../shared/info-tip.component';
         @if (exportQuotaExceeded()) {
           <div class="notice warning export-upgrade" role="alert">
             <span>{{ exportMessage() }}</span>
-            <a routerLink="/upgrade" class="secondary-button">View plans</a>
+            <a routerLink="/upgrade" class="secondary-button" (click)="trackExportUpgradeClick()">View plans</a>
           </div>
         } @else if (exportMessage()) {
           <div class="notice" role="status">{{ exportMessage() }}</div>
@@ -103,8 +103,17 @@ export class PredictionHistoryComponent implements OnInit {
       error: (error) => {
         this.exportQuotaExceeded.set(error.status === 402);
         this.exportMessage.set(error.status === 402 ? error.error?.detail ?? 'Your current plan has no CSV exports remaining today.' : error.error?.detail ?? 'Prediction history could not be exported.');
+        if (error.status === 402) this.trackQuotaBlocked();
       },
     });
+  }
+
+  trackExportUpgradeClick(): void {
+    this.api.recordMonetizationEvent({
+      eventName: 'quota_callout_click',
+      source: 'prediction_history',
+      featureKey: 'csv_export',
+    }).subscribe({ error: () => undefined });
   }
 
   private downloadCsv(blob: Blob, fileName: string): void {
@@ -119,5 +128,19 @@ export class PredictionHistoryComponent implements OnInit {
   private exportFileName(contentDisposition: string | null): string {
     const match = contentDisposition?.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
     return match?.[1] ? decodeURIComponent(match[1]) : `stockanalyzer-predictions-${new Date().toISOString().slice(0, 10)}.csv`;
+  }
+
+  private trackQuotaBlocked(): void {
+    this.api.recordMonetizationEvent({
+      eventName: 'paid_feature_attempt',
+      source: 'prediction_history',
+      featureKey: 'csv_export',
+      metadata: { result: 'quota_blocked' },
+    }).subscribe({ error: () => undefined });
+    this.api.recordMonetizationEvent({
+      eventName: 'quota_callout_view',
+      source: 'prediction_history',
+      featureKey: 'csv_export',
+    }).subscribe({ error: () => undefined });
   }
 }

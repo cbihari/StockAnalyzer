@@ -91,7 +91,7 @@ import { WatchlistService } from '../core/watchlist.service';
             @if (aiQuotaExceeded()) {
               <div class="ai-upgrade-callout" role="alert">
                 <div><strong>AI explanation limit reached</strong><p>{{ aiError() }}</p></div>
-                <a routerLink="/upgrade" class="secondary-button">View plans</a>
+                <a routerLink="/upgrade" class="secondary-button" (click)="trackAiUpgradeClick()">View plans</a>
               </div>
             } @else if (aiError()) {
               <div class="error-message" role="alert">{{ aiError() }} <button type="button" class="secondary-button" (click)="generateAiExplanation(false)">Try again</button></div>
@@ -166,6 +166,7 @@ export class StockDetailComponent implements OnInit, OnDestroy {
       error: (error) => {
         this.aiQuotaExceeded.set(error.status === 402);
         this.aiError.set(this.aiErrorMessage(error));
+        if (error.status === 402) this.trackAiQuotaBlocked();
       },
     });
   }
@@ -190,6 +191,26 @@ export class StockDetailComponent implements OnInit, OnDestroy {
     if (error.status === 402) return error.error?.detail ?? 'Your current plan has no AI explanations remaining today.';
     if (error.status === 504) return 'The explanation request timed out. Please try again.';
     return error.error?.detail ?? 'AI explanation is temporarily unavailable.';
+  }
+  private trackAiQuotaBlocked(): void {
+    this.api.recordMonetizationEvent({
+      eventName: 'paid_feature_attempt',
+      source: 'stock_detail',
+      featureKey: 'ai_explanation',
+      metadata: { result: 'quota_blocked' },
+    }).subscribe({ error: () => undefined });
+    this.api.recordMonetizationEvent({
+      eventName: 'quota_callout_view',
+      source: 'stock_detail',
+      featureKey: 'ai_explanation',
+    }).subscribe({ error: () => undefined });
+  }
+  trackAiUpgradeClick(): void {
+    this.api.recordMonetizationEvent({
+      eventName: 'quota_callout_click',
+      source: 'stock_detail',
+      featureKey: 'ai_explanation',
+    }).subscribe({ error: () => undefined });
   }
   private clearTrainingMessageTimer(): void { if (this.trainingMessageTimer !== undefined) { clearTimeout(this.trainingMessageTimer); this.trainingMessageTimer = undefined; } }
 }

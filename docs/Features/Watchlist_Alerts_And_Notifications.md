@@ -22,6 +22,8 @@ Let users save tickers, organize them with notes/tags, configure simple browser-
 - Controller: `WorkspaceController`.
 - Service: `GuestWorkspaceService`.
 - Repository: `GuestWorkspaceRepository`.
+- Monetization: `GuestWorkspaceService` checks `watchlist_item` and `alert_rule`
+  stored limits before saving workspace JSON.
 
 ## API Endpoints
 
@@ -41,6 +43,8 @@ Let users save tickers, organize them with notes/tags, configure simple browser-
 
 - `X-Client-ID` must be a valid GUID for anonymous workspace sync.
 - Ticker, notes, tags, alert thresholds, and list sizes should remain bounded.
+- Watchlist size is limited by the active plan's `watchlist_item` stored limit.
+- Alert-rule count is limited by the active plan's `alert_rule` stored limit.
 
 ## Database Tables
 
@@ -50,6 +54,8 @@ Let users save tickers, organize them with notes/tags, configure simple browser-
 
 - Browser storage failures should degrade to in-memory state.
 - API sync failures should keep local state usable and show a non-destructive error.
+- Plan-limit failures return `402`; the frontend rolls back to the last synced
+  workspace state and shows a `/upgrade` callout.
 
 ## Future Improvements
 

@@ -43,7 +43,46 @@ public sealed record UsageCheckDto(
     string? UpgradePlan,
     string Message);
 
+public sealed record StoredLimitCheckDto(
+    string FeatureKey,
+    string Label,
+    string Plan,
+    int RequestedTotal,
+    int? StoredLimit,
+    bool Allowed,
+    string? UpgradePlan,
+    string Message);
+
 public sealed record RecordUsageRequestDto(string FeatureKey, int Quantity = 1);
+
+public sealed record MonetizationEventRequestDto(
+    string EventName,
+    string Source,
+    string? FeatureKey = null,
+    string? PlanKey = null,
+    IReadOnlyDictionary<string, string>? Metadata = null);
+
+public sealed record MonetizationEventResponseDto(
+    string EventName,
+    string Message);
+
+public sealed record MonetizationFunnelEventDto(
+    string EventName,
+    int Count);
+
+public sealed record MonetizationFunnelBreakdownDto(
+    string EventName,
+    string Source,
+    string? FeatureKey,
+    string? PlanKey,
+    int Count);
+
+public sealed record MonetizationFunnelReportDto(
+    DateOnly From,
+    DateOnly To,
+    int TotalEvents,
+    IReadOnlyList<MonetizationFunnelEventDto> Events,
+    IReadOnlyList<MonetizationFunnelBreakdownDto> Breakdown);
 
 public sealed record SubscriptionStateDto(
     string Plan,

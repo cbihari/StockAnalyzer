@@ -10,6 +10,7 @@ describe('PredictionHistoryComponent CSV export', () => {
     getPredictionHistory: jasmine.Spy;
     exportPredictionHistoryCsv: jasmine.Spy;
     evaluatePredictions: jasmine.Spy;
+    recordMonetizationEvent: jasmine.Spy;
   };
 
   beforeEach(() => {
@@ -25,6 +26,7 @@ describe('PredictionHistoryComponent CSV export', () => {
       })),
       exportPredictionHistoryCsv: jasmine.createSpy('exportPredictionHistoryCsv'),
       evaluatePredictions: jasmine.createSpy('evaluatePredictions'),
+      recordMonetizationEvent: jasmine.createSpy('recordMonetizationEvent').and.returnValue(of({ eventName: 'test', message: 'ok' })),
     };
     TestBed.configureTestingModule({
       imports: [PredictionHistoryComponent],
@@ -64,5 +66,9 @@ describe('PredictionHistoryComponent CSV export', () => {
     expect(component.exporting()).toBeFalse();
     expect(component.exportQuotaExceeded()).toBeTrue();
     expect(component.exportMessage()).toContain('Upgrade to Pro');
+    expect(api.recordMonetizationEvent).toHaveBeenCalledWith(jasmine.objectContaining({
+      eventName: 'paid_feature_attempt',
+      featureKey: 'csv_export',
+    }));
   });
 });

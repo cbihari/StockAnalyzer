@@ -6,6 +6,7 @@ import { StockApiService } from './stock-api.service';
 const RULES_KEY = 'stock-analyzer-alert-rules-v1';
 const NOTIFICATIONS_KEY = 'stock-analyzer-notifications-v1';
 const SYNC_DEBOUNCE_MS = 150;
+type AlertSyncState = 'local' | 'syncing' | 'synced' | 'offline' | 'blocked';
 
 export type AlertType = 'price_above' | 'price_below' | 'daily_move';
 export type AlertFrequency = 'once' | 'daily';
@@ -53,8 +54,12 @@ export class AlertService {
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   readonly rules = signal<AlertRule[]>(this.load<AlertRule[]>(RULES_KEY, []));
   readonly notifications = signal<AlertNotification[]>(this.load<AlertNotification[]>(NOTIFICATIONS_KEY, []));
+  private lastPersistedRules = this.rules();
+  private lastPersistedNotifications = this.notifications();
   readonly unreadCount = computed(() => this.notifications().filter((item) => !item.read).length);
-  readonly syncState = signal<'local' | 'syncing' | 'synced' | 'offline'>('local');
+  readonly syncState = signal<AlertSyncState>('local');
+  readonly quotaExceeded = signal(false);
+  readonly quotaMessage = signal('');
 
   constructor() { this.hydrate(); }
 
@@ -135,8 +140,8 @@ export class AlertService {
     };
   }
 
-  private setRules(rules: AlertRule[]): void { this.localVersion++; this.rules.set(rules); this.save(RULES_KEY, rules); this.scheduleSync(); }
-  private setNotifications(items: AlertNotification[]): void { this.localVersion++; this.notifications.set(items); this.save(NOTIFICATIONS_KEY, items); this.scheduleSync(); }
+  private setRules(rules: AlertRule[]): void { this.localVersion++; this.clearQuotaState(); this.rules.set(rules); this.save(RULES_KEY, rules); this.scheduleSync(); }
+  private setNotifications(items: AlertNotification[]): void { this.localVersion++; this.clearQuotaState(); this.notifications.set(items); this.save(NOTIFICATIONS_KEY, items); this.scheduleSync(); }
   private save(key: string, value: unknown): void { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Optional guest persistence. */ } }
   private load<T>(key: string, fallback: T): T { try { return JSON.parse(localStorage.getItem(key) ?? 'null') ?? fallback; } catch { return fallback; } }
   private hydrate(): void {
@@ -150,6 +155,8 @@ export class AlertService {
         }
         if (remote.rules.length || remote.notifications.length) {
           this.rules.set(remote.rules as AlertRule[]); this.notifications.set(remote.notifications as AlertNotification[]);
+          this.lastPersistedRules = remote.rules as AlertRule[];
+          this.lastPersistedNotifications = remote.notifications as AlertNotification[];
           this.save(RULES_KEY, remote.rules); this.save(NOTIFICATIONS_KEY, remote.notifications); this.syncState.set('synced');
         } else { this.scheduleSync(); }
       },
@@ -165,14 +172,48 @@ export class AlertService {
   }
   private sync(version: number): void {
     const requestVersion = ++this.saveVersion;
+    const rules = this.rules();
+    const notifications = this.notifications();
     this.syncState.set('syncing');
-    this.api.saveWorkspaceAlerts({ rules: this.rules(), notifications: this.notifications() }).subscribe({
+    this.api.saveWorkspaceAlerts({ rules, notifications }).subscribe({
       next: () => {
-        if (requestVersion === this.saveVersion && version === this.localVersion) this.syncState.set('synced');
+        if (requestVersion === this.saveVersion && version === this.localVersion) {
+          this.lastPersistedRules = rules;
+          this.lastPersistedNotifications = notifications;
+          this.clearQuotaState();
+          this.syncState.set('synced');
+        }
       },
-      error: () => {
-        if (requestVersion === this.saveVersion) this.syncState.set('offline');
+      error: (error) => {
+        if (requestVersion === this.saveVersion && version === this.localVersion) {
+          if (error.status === 402) {
+            this.quotaExceeded.set(true);
+            this.quotaMessage.set(error.error?.detail ?? 'Your current plan has reached the alert rule limit.');
+            this.trackQuotaBlocked();
+            this.rules.set(this.lastPersistedRules);
+            this.notifications.set(this.lastPersistedNotifications);
+            this.save(RULES_KEY, this.lastPersistedRules);
+            this.save(NOTIFICATIONS_KEY, this.lastPersistedNotifications);
+            this.syncState.set('blocked');
+            return;
+          }
+          this.syncState.set('offline');
+        }
       },
     });
+  }
+  private clearQuotaState(): void { this.quotaExceeded.set(false); this.quotaMessage.set(''); }
+  private trackQuotaBlocked(): void {
+    this.api.recordMonetizationEvent({
+      eventName: 'paid_feature_attempt',
+      source: 'watchlist',
+      featureKey: 'alert_rule',
+      metadata: { result: 'quota_blocked' },
+    }).subscribe({ error: () => undefined });
+    this.api.recordMonetizationEvent({
+      eventName: 'quota_callout_view',
+      source: 'watchlist',
+      featureKey: 'alert_rule',
+    }).subscribe({ error: () => undefined });
   }
 }

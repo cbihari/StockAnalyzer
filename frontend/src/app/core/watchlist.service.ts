@@ -6,6 +6,8 @@ const STORAGE_KEY = 'stock-analyzer-watchlist-v2';
 const LEGACY_STORAGE_KEY = 'stock-analyzer-watchlist-v1';
 const DEFAULT_TICKERS = ['RELIANCE.NS', 'AAPL', 'MSFT'];
 const SYNC_DEBOUNCE_MS = 150;
+const LOCAL_STORAGE_ITEM_CAP = 200;
+type WorkspaceSyncState = 'local' | 'syncing' | 'synced' | 'offline' | 'blocked';
 
 export interface WatchlistItem {
   ticker: string;
@@ -21,8 +23,11 @@ export class WatchlistService {
   private saveVersion = 0;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   readonly items = signal<WatchlistItem[]>(this.load());
+  private lastPersistedItems = this.items();
   readonly tickers = computed(() => this.items().map((item) => item.ticker));
-  readonly syncState = signal<'local' | 'syncing' | 'synced' | 'offline'>('local');
+  readonly syncState = signal<WorkspaceSyncState>('local');
+  readonly quotaExceeded = signal(false);
+  readonly quotaMessage = signal('');
 
   constructor() { this.hydrate(); }
 
@@ -33,7 +38,7 @@ export class WatchlistService {
     const normalized = normalizeTicker(ticker);
     const saved = !this.has(normalized);
     this.set(saved
-      ? [...this.items(), this.createItem(normalized)].slice(0, 10)
+      ? [...this.items(), this.createItem(normalized)]
       : this.items().filter((item) => item.ticker !== normalized));
     return saved;
   }
@@ -57,6 +62,8 @@ export class WatchlistService {
 
   private set(items: WatchlistItem[]): void {
     this.localVersion++;
+    this.quotaExceeded.set(false);
+    this.quotaMessage.set('');
     this.items.set(items);
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch { /* Storage can be unavailable in private contexts. */ }
     this.scheduleSync();
@@ -66,7 +73,7 @@ export class WatchlistService {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
       if (Array.isArray(saved)) {
-        return saved.filter(this.isItem).slice(0, 10).map((item) => ({
+        return saved.filter(this.isItem).slice(0, LOCAL_STORAGE_ITEM_CAP).map((item) => ({
           ticker: normalizeTicker(item.ticker),
           addedAt: item.addedAt,
           note: item.note.slice(0, 500),
@@ -75,7 +82,7 @@ export class WatchlistService {
       }
       const legacy = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) ?? 'null');
       if (Array.isArray(legacy)) {
-        const migrated = legacy.filter((item): item is string => typeof item === 'string').slice(0, 10).map((ticker) => this.createItem(normalizeTicker(ticker)));
+        const migrated = legacy.filter((item): item is string => typeof item === 'string').slice(0, LOCAL_STORAGE_ITEM_CAP).map((ticker) => this.createItem(normalizeTicker(ticker)));
         this.persistMigration(migrated);
         return migrated;
       }
@@ -104,6 +111,7 @@ export class WatchlistService {
         }
         if (remote.length) {
           this.items.set(remote);
+          this.lastPersistedItems = remote;
           try { localStorage.setItem(STORAGE_KEY, JSON.stringify(remote)); } catch { /* Local cache is optional. */ }
           this.syncState.set('synced');
         } else {
@@ -128,12 +136,40 @@ export class WatchlistService {
     this.api.saveWorkspaceWatchlist(items).subscribe({
       next: () => {
         if (requestVersion === this.saveVersion && version === this.localVersion) {
+          this.lastPersistedItems = items;
+          this.quotaExceeded.set(false);
+          this.quotaMessage.set('');
           this.syncState.set('synced');
         }
       },
-      error: () => {
-        if (requestVersion === this.saveVersion) this.syncState.set('offline');
+      error: (error) => {
+        if (requestVersion === this.saveVersion && version === this.localVersion) {
+          if (error.status === 402) {
+            this.quotaExceeded.set(true);
+            this.quotaMessage.set(error.error?.detail ?? 'Your current plan has reached the watchlist limit.');
+            this.trackQuotaBlocked();
+            this.items.set(this.lastPersistedItems);
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.lastPersistedItems)); } catch { /* Local cache is optional. */ }
+            this.syncState.set('blocked');
+            return;
+          }
+          this.syncState.set('offline');
+        }
       },
     });
+  }
+
+  private trackQuotaBlocked(): void {
+    this.api.recordMonetizationEvent({
+      eventName: 'paid_feature_attempt',
+      source: 'watchlist',
+      featureKey: 'watchlist_item',
+      metadata: { result: 'quota_blocked' },
+    }).subscribe({ error: () => undefined });
+    this.api.recordMonetizationEvent({
+      eventName: 'quota_callout_view',
+      source: 'watchlist',
+      featureKey: 'watchlist_item',
+    }).subscribe({ error: () => undefined });
   }
 }
