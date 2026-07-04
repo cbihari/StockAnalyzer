@@ -33,6 +33,45 @@ interface RazorpayCheckoutResponse {
   razorpay_signature: string;
 }
 
+const fallbackPlans: SubscriptionPlan[] = [
+  {
+    key: 'free',
+    name: 'Free',
+    description: 'Core educational research tools',
+    priceLabel: 'INR 0',
+    limits: [
+      { featureKey: 'stock_analysis', label: 'Stock analysis', dailyLimit: 10, storedLimit: null, unit: 'analysis' },
+      { featureKey: 'ai_explanation', label: 'AI explanations', dailyLimit: 2, storedLimit: null, unit: 'explanation' },
+      { featureKey: 'watchlist_item', label: 'Watchlist items', dailyLimit: null, storedLimit: 10, unit: 'item' },
+      { featureKey: 'csv_export', label: 'CSV exports', dailyLimit: 0, storedLimit: null, unit: 'export' },
+    ],
+  },
+  {
+    key: 'pro',
+    name: 'Pro',
+    description: 'Higher limits for active retail research',
+    priceLabel: 'INR 499/month',
+    limits: [
+      { featureKey: 'stock_analysis', label: 'Stock analysis', dailyLimit: 100, storedLimit: null, unit: 'analysis' },
+      { featureKey: 'ai_explanation', label: 'AI explanations', dailyLimit: 25, storedLimit: null, unit: 'explanation' },
+      { featureKey: 'watchlist_item', label: 'Watchlist items', dailyLimit: null, storedLimit: 100, unit: 'item' },
+      { featureKey: 'csv_export', label: 'CSV exports', dailyLimit: 10, storedLimit: null, unit: 'export' },
+    ],
+  },
+  {
+    key: 'power',
+    name: 'Power',
+    description: 'Advanced limits for power users and creators',
+    priceLabel: 'INR 999/month',
+    limits: [
+      { featureKey: 'stock_analysis', label: 'Stock analysis', dailyLimit: 300, storedLimit: null, unit: 'analysis' },
+      { featureKey: 'ai_explanation', label: 'AI explanations', dailyLimit: 100, storedLimit: null, unit: 'explanation' },
+      { featureKey: 'watchlist_item', label: 'Watchlist items', dailyLimit: null, storedLimit: 250, unit: 'item' },
+      { featureKey: 'csv_export', label: 'CSV exports', dailyLimit: 50, storedLimit: null, unit: 'export' },
+    ],
+  },
+];
+
 @Component({
   imports: [CommonModule, RouterLink, TierBadgeComponent],
   template: `
@@ -107,8 +146,8 @@ interface RazorpayCheckoutResponse {
             } @else if (!auth.authenticated()) {
               <a routerLink="/login" class="plan-link">Sign in to upgrade</a>
             } @else {
-              <button type="button" [disabled]="checkoutLoading() === plan.key" (click)="startCheckout(plan)">
-                {{ checkoutLoading() === plan.key ? 'Starting checkout...' : 'Upgrade to ' + plan.name }}
+              <button type="button" [disabled]="checkoutLoading() === plan.key || usingFallbackStatus()" (click)="startCheckout(plan)">
+                {{ usingFallbackStatus() ? 'Checkout unavailable' : checkoutLoading() === plan.key ? 'Starting checkout...' : 'Upgrade to ' + plan.name }}
               </button>
             }
           </article>
@@ -116,6 +155,7 @@ interface RazorpayCheckoutResponse {
       </section>
 
       @if (message()) { <p class="upgrade-note" role="status">{{ message() }}</p> }
+      @if (usingFallbackStatus()) { <p class="upgrade-note warning" role="status">Live plan sync is temporarily unavailable. Showing standard plan details; checkout will reopen after the backend update finishes.</p> }
       <p class="upgrade-note">Razorpay Test Mode is used for local checkout. The browser receives only the Test Mode Key ID; payment verification runs on the backend.</p>
     </main>
   `,
@@ -150,6 +190,7 @@ interface RazorpayCheckoutResponse {
     .plan-card > button, .plan-card > .plan-link { width: 100%; }
     .coming-soon { margin: 12px 0 0; color: var(--muted); font-size: .7rem; text-align: center; }
     .upgrade-note { max-width: 980px; margin: 18px 0 0; color: #667269; font-size: .68rem; text-align: center; }
+    .upgrade-note.warning { color: #d6a84f; }
     @media (max-width: 960px) { .pricing-grid, .usage-grid { grid-template-columns: 1fr; } .status-card { align-items: flex-start; flex-direction: column; } .status-actions { justify-items: start; } }
     @media (max-width: 760px) { .pricing-grid { margin-top: 32px; } .plan-card { padding: 24px; } }
   `],
@@ -161,6 +202,7 @@ export class UpgradeComponent implements OnInit {
   readonly error = signal('');
   readonly message = signal('');
   readonly status = signal<MonetizationStatus | null>(null);
+  readonly usingFallbackStatus = signal(false);
   readonly checkoutLoading = signal('');
   readonly plans = computed(() => this.status()?.plans ?? []);
   readonly visibleUsage = computed(() => this.status()?.usage ?? []);
@@ -172,14 +214,18 @@ export class UpgradeComponent implements OnInit {
   loadStatus(): void {
     this.loading.set(true);
     this.error.set('');
+    this.usingFallbackStatus.set(false);
     this.api.getMonetizationStatus().pipe(finalize(() => this.loading.set(false))).subscribe({
       next: (status) => this.status.set(status),
-      error: (error) => this.error.set(error.error?.detail ?? 'Plan details could not be loaded.'),
+      error: () => {
+        this.status.set(this.fallbackStatus());
+        this.usingFallbackStatus.set(true);
+      },
     });
   }
 
   startCheckout(plan: SubscriptionPlan): void {
-    if (plan.key === 'free' || !this.auth.authenticated()) return;
+    if (plan.key === 'free' || !this.auth.authenticated() || this.usingFallbackStatus()) return;
     const planKey = plan.key;
     this.checkoutLoading.set(plan.key);
     this.message.set('');
@@ -232,6 +278,26 @@ export class UpgradeComponent implements OnInit {
     if (limit.dailyLimit !== null) return `${limit.dailyLimit} ${limit.label.toLowerCase()} per day`;
     if (limit.storedLimit !== null) return `${limit.storedLimit} ${limit.label.toLowerCase()}`;
     return limit.label;
+  }
+
+  private fallbackStatus(): MonetizationStatus {
+    const usage = fallbackPlans[0].limits.map((limit) => ({
+      featureKey: limit.featureKey,
+      label: limit.label,
+      usedToday: 0,
+      dailyLimit: limit.dailyLimit,
+      remainingToday: limit.dailyLimit,
+      storedLimit: limit.storedLimit,
+      allowed: true,
+      unit: limit.unit,
+    }));
+    return {
+      plan: 'free',
+      authenticated: this.auth.authenticated(),
+      subscription: null,
+      plans: fallbackPlans,
+      usage,
+    };
   }
 
   private trackCheckoutEvent(eventName: 'checkout_start' | 'checkout_created' | 'checkout_failed', planKey: 'pro' | 'power', provider = ''): void {
