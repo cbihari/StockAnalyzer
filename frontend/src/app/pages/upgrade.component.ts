@@ -3,9 +3,35 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
-import { MonetizationStatus, SubscriptionPlan, UsageFeature } from '../core/models';
+import { MonetizationStatus, RazorpayOrderResponse, SubscriptionPlan, UsageFeature } from '../core/models';
 import { StockApiService } from '../core/stock-api.service';
 import { TierBadgeComponent } from '../shared/tier-badge.component';
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: RazorpayCheckoutOptions) => { open: () => void };
+  }
+}
+
+interface RazorpayCheckoutOptions {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  prefill: { name: string; email: string };
+  theme: { color: string };
+  handler: (response: RazorpayCheckoutResponse) => void;
+  modal: { ondismiss: () => void };
+}
+
+interface RazorpayCheckoutResponse {
+  razorpay_payment_id: string;
+  razorpay_order_id?: string;
+  razorpay_subscription_id?: string;
+  razorpay_signature: string;
+}
 
 @Component({
   imports: [CommonModule, RouterLink, TierBadgeComponent],
@@ -90,7 +116,7 @@ import { TierBadgeComponent } from '../shared/tier-badge.component';
       </section>
 
       @if (message()) { <p class="upgrade-note" role="status">{{ message() }}</p> }
-      <p class="upgrade-note">Manual checkout is enabled for local testing. Paid access starts only after the backend receives a provider confirmation webhook.</p>
+      <p class="upgrade-note">Razorpay Test Mode is used for local checkout. The browser receives only the Test Mode Key ID; payment verification runs on the backend.</p>
     </main>
   `,
   styles: [`
@@ -158,20 +184,17 @@ export class UpgradeComponent implements OnInit {
     this.checkoutLoading.set(plan.key);
     this.message.set('');
     this.trackCheckoutEvent('checkout_start', planKey);
-    const origin = window.location.origin;
-    this.api.startCheckout(planKey, `${origin}/upgrade?checkout=success`, `${origin}/upgrade?checkout=cancelled`)
-      .pipe(finalize(() => this.checkoutLoading.set('')))
-      .subscribe({
-        next: (response) => {
-          this.trackCheckoutEvent('checkout_created', planKey, response.provider);
-          this.message.set(response.message);
-          window.location.assign(response.checkoutUrl);
-        },
-        error: (error) => {
-          this.trackCheckoutEvent('checkout_failed', planKey);
-          this.message.set(error.error?.detail ?? 'Checkout could not be started.');
-        },
-      });
+    this.api.createRazorpayOrder(planKey).subscribe({
+      next: (response) => {
+        this.trackCheckoutEvent('checkout_created', planKey, response.provider);
+        this.openRazorpayCheckout(response);
+      },
+      error: (error) => {
+        this.checkoutLoading.set('');
+        this.trackCheckoutEvent('checkout_failed', planKey);
+        this.message.set(error.error?.detail ?? 'Checkout could not be started.');
+      },
+    });
   }
 
   planName(plan: string): string {
@@ -218,5 +241,76 @@ export class UpgradeComponent implements OnInit {
       planKey,
       metadata: provider ? { provider } : undefined,
     }).subscribe({ error: () => undefined });
+  }
+
+  private openRazorpayCheckout(order: RazorpayOrderResponse): void {
+    this.loadRazorpayCheckoutScript()
+      .then(() => {
+        if (!window.Razorpay) throw new Error('Razorpay Checkout could not be loaded.');
+        const checkout = new window.Razorpay({
+          key: order.keyId,
+          amount: order.amount,
+          currency: order.currency,
+          name: order.name,
+          description: order.description,
+          order_id: order.orderId,
+          prefill: { name: order.prefillName, email: order.prefillEmail },
+          theme: { color: '#2ab67d' },
+          handler: (payment) => this.verifyRazorpayPayment(order, payment),
+          modal: {
+            ondismiss: () => {
+              this.checkoutLoading.set('');
+              this.message.set('Checkout was closed before payment was completed.');
+            },
+          },
+        });
+        checkout.open();
+      })
+      .catch(() => {
+        this.checkoutLoading.set('');
+        this.trackCheckoutEvent('checkout_failed', order.planKey, order.provider);
+        this.message.set('Razorpay Checkout could not be loaded. Please check your connection and try again.');
+      });
+  }
+
+  private verifyRazorpayPayment(order: RazorpayOrderResponse, payment: RazorpayCheckoutResponse): void {
+    this.api.verifyRazorpayPayment({
+      razorpayPaymentId: payment.razorpay_payment_id,
+      razorpayOrderId: payment.razorpay_order_id ?? order.orderId,
+      razorpaySubscriptionId: payment.razorpay_subscription_id ?? null,
+      razorpaySignature: payment.razorpay_signature,
+    }).subscribe({
+      next: (result) => {
+        this.checkoutLoading.set('');
+        this.message.set(result.message);
+        this.loadStatus();
+      },
+      error: (error) => {
+        this.checkoutLoading.set('');
+        this.trackCheckoutEvent('checkout_failed', order.planKey, order.provider);
+        this.message.set(error.error?.detail ?? 'Payment verification failed.');
+      },
+    });
+  }
+
+  private loadRazorpayCheckoutScript(): Promise<void> {
+    if (window.Razorpay) return Promise.resolve();
+    const existing = document.getElementById('razorpay-checkout-js') as HTMLScriptElement | null;
+    if (existing) {
+      return new Promise((resolve, reject) => {
+        existing.addEventListener('load', () => resolve(), { once: true });
+        existing.addEventListener('error', () => reject(), { once: true });
+      });
+    }
+
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.id = 'razorpay-checkout-js';
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject();
+      document.body.appendChild(script);
+    });
   }
 }

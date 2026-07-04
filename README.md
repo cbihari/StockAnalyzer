@@ -155,7 +155,12 @@ Compose reads values from `.env`. Never commit real credentials.
 | `ML_LOG_LEVEL` | `INFO` | FastAPI logging level |
 | `MARKET_DATA_PROVIDER` | `yahoo` | ML market-data adapter selection |
 | `MARKET_DATA_PROVIDER_NAME` | `yahoo_finance` | Provider label returned by the .NET research API |
-| `PAYMENT_PROVIDER` | `manual` | .NET checkout provider adapter. Manual is for local/testing only. |
+| `PAYMENT_PROVIDER` | `manual` | Legacy .NET checkout provider adapter. The Angular upgrade page uses Razorpay order checkout directly. |
+| `RAZORPAY_KEY_ID` | empty | Razorpay Test Mode API key ID. Safe to return to Angular for Checkout. |
+| `RAZORPAY_KEY_SECRET` | empty | Razorpay Test Mode API key secret. Backend only; never expose to Angular. |
+| `RAZORPAY_WEBHOOK_SECRET` | empty | Razorpay webhook signing secret; not the API key secret. |
+| `RAZORPAY_PRO_AMOUNT_PAISE` | `49900` | Pro checkout amount in paise. |
+| `RAZORPAY_POWER_AMOUNT_PAISE` | `99900` | Power checkout amount in paise. |
 | `STOCKANALYZER_PLAN_OVERRIDE` | empty | Optional local/staging override for plan resolution: `free`, `pro`, or `power`. |
 | `AI_EXPLANATIONS_ENABLED` | `true` | Enables optional generated explanations |
 | `LLM_PROVIDER` | `openai` | Selects the replaceable LLM provider |
@@ -165,6 +170,35 @@ Compose reads values from `.env`. Never commit real credentials.
 | `OPENAI_TIMEOUT_SECONDS` | `30` | OpenAI SDK timeout before deterministic fallback |
 | `AI_RATE_LIMIT_PER_MINUTE` | `10` | FastAPI explanation requests allowed per client/IP per minute |
 | `ML_AI_TIMEOUT_SECONDS` | `45` | .NET timeout for the FastAPI explanation request |
+
+### Razorpay Test Mode setup
+
+The local CSV `rzp-key.csv` is ignored by Git. For direct .NET runs, store the
+Test Mode credentials in user-secrets:
+
+```bash
+cd backend
+dotnet user-secrets set "Razorpay:KeyId" "<rzp_test_key_id>"
+dotnet user-secrets set "Razorpay:KeySecret" "<rzp_test_key_secret>"
+```
+
+Docker Compose reads `.env`, so set `RAZORPAY_KEY_ID` and
+`RAZORPAY_KEY_SECRET` there for container runs. Do not commit `.env` or
+`rzp-key.csv`.
+
+Checkout flow:
+
+1. Sign in to StockAnalyzer.
+2. Open `http://localhost:4200/upgrade`.
+3. Click a paid plan. Angular calls `POST /api/payments/create-order`, loads
+   Razorpay Checkout, and receives only the Test Mode Key ID.
+4. Complete payment with Razorpay test credentials, then Angular posts
+   `razorpay_payment_id`, `razorpay_order_id`, and `razorpay_signature` to
+   `POST /api/payments/verify`.
+
+Use Razorpay's Test Mode cards/UPI from the Razorpay dashboard documentation,
+such as the standard successful test Visa card `4111 1111 1111 1111` with any
+future expiry and any CVV, or a Razorpay test UPI ID such as `success@razorpay`.
 
 ## API Documentation
 

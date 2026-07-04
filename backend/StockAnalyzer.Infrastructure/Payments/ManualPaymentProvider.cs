@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 using StockAnalyzer.Application.Abstractions;
 using StockAnalyzer.Application.DTOs;
@@ -6,11 +5,11 @@ using StockAnalyzer.Domain.Monetization;
 
 namespace StockAnalyzer.Infrastructure.Payments;
 
-public sealed class ManualPaymentProvider(IConfiguration configuration) : IPaymentProvider
+public sealed class ManualPaymentProvider : IPaymentProvider
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public string Name => (configuration["Payments:Provider"] ?? "manual").Trim().ToLowerInvariant();
+    public string Name => "manual";
 
     public Task<PaymentCheckoutSessionDto> CreateCheckoutSessionAsync(
         Guid userId,

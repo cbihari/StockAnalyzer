@@ -2,7 +2,7 @@ import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { AffiliateClickStat, AffiliatePartner, AiExplanationResponse, AiResearchResponse, CheckoutResponse, HistoricalPrice, IndicatorResponse, MarketOverview, MonetizationEventRequest, MonetizationEventResponse, MonetizationFunnelReport, MonetizationStatus, MlPrediction, ModelTrainingJob, ModelTrainingResult, ModelVersionsResponse, PortfolioHolding, PortfolioSummary, PredictionEvaluationResult, PredictionHistoryResponse, StockAnalysis, StockComparison, StockNews, StockQuotesResponse, StockSuggestion, TickerModelMetrics, WorkspaceAlertState, WorkspaceWatchlistItem } from './models';
+import { AffiliateClickStat, AffiliatePartner, AiExplanationResponse, AiResearchResponse, CheckoutResponse, HistoricalPrice, IndicatorResponse, MarketOverview, MonetizationEventRequest, MonetizationEventResponse, MonetizationFunnelReport, MonetizationStatus, MlPrediction, ModelTrainingJob, ModelTrainingResult, ModelVersionsResponse, PortfolioHolding, PortfolioSummary, PredictionEvaluationResult, PredictionHistoryResponse, RazorpayOrderResponse, RazorpayPaymentVerificationRequest, RazorpayPaymentVerificationResponse, StockAnalysis, StockComparison, StockNews, StockQuotesResponse, StockSuggestion, TickerModelMetrics, WorkspaceAlertState, WorkspaceWatchlistItem } from './models';
 import { ClientIdentityService } from './client-identity.service';
 
 @Injectable({ providedIn: 'root' })
@@ -194,6 +194,14 @@ export class StockApiService {
       successUrl,
       cancelUrl,
     });
+  }
+
+  createRazorpayOrder(planKey: 'pro' | 'power'): Observable<RazorpayOrderResponse> {
+    return this.http.post<RazorpayOrderResponse>(`${this.baseUrl}/api/payments/create-order`, { planKey });
+  }
+
+  verifyRazorpayPayment(request: RazorpayPaymentVerificationRequest): Observable<RazorpayPaymentVerificationResponse> {
+    return this.http.post<RazorpayPaymentVerificationResponse>(`${this.baseUrl}/api/payments/verify`, request);
   }
 
   recordMonetizationEvent(request: MonetizationEventRequest): Observable<MonetizationEventResponse> {

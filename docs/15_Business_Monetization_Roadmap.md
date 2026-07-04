@@ -175,9 +175,11 @@ Build in this order:
 
 1. Plan and entitlement domain model. Status: backend foundation added.
 2. Usage-metering service. Status: backend foundation added.
-3. Payment provider abstraction. Status: manual provider seam added.
-4. Checkout and webhook handling. Status: manual webhook processing added.
-5. Pricing/upgrade frontend. Status: upgrade page connected to backend status and checkout.
+3. Payment provider abstraction. Status: manual and Razorpay providers added.
+4. Checkout and webhook handling. Status: manual checkout, Razorpay Payment
+   Links/webhooks, and Razorpay Test Mode order verification added.
+5. Pricing/upgrade frontend. Status: upgrade page connected to backend status
+   and Razorpay Test Mode Checkout.
 6. Limit-aware UI states. Status: upgrade page displays current usage and plan limits.
 7. Analytics events.
 8. Affiliate disclosure improvements.
@@ -229,9 +231,11 @@ Fourth development slice:
 - The Angular upgrade page calls `/api/monetization/status`.
 - The page displays current plan, subscription state, and today's quota usage.
 - Free/Pro/Power pricing cards are rendered from backend plan metadata.
-- Signed-in users can start checkout through `/api/monetization/checkout`.
+- Signed-in users start Razorpay Test Mode Checkout through
+  `/api/payments/create-order`.
 - Anonymous users are routed to login before checkout.
-- Manual checkout redirects to the backend-provided URL for local testing.
+- Angular receives only the Razorpay Test Mode Key ID and verifies completed
+  payments through `/api/payments/verify`.
 
 Fifth development slice:
 
@@ -297,8 +301,34 @@ Twelfth development slice:
   and admin policy as the report page.
 - Export includes event totals and source/feature/plan breakdown rows.
 
-Next development slice: wire a real payment provider such as Razorpay/Stripe
-behind `IPaymentProvider`, or add trend charts for admin funnel reports.
+Thirteenth development slice:
+
+- Monetization funnel reports now include daily aggregate trend rows.
+- `/admin/monetization-funnel` renders a compact daily trend bar view.
+- Funnel CSV export includes daily rows in addition to event totals and
+  source/feature/plan breakdowns.
+
+Fourteenth development slice:
+
+- Added `RazorpayPaymentProvider` behind `IPaymentProvider`.
+- `PAYMENT_PROVIDER=razorpay` creates Razorpay Payment Links for Pro and Power.
+- Razorpay webhooks verify `X-Razorpay-Signature` before activating access.
+- A paid Razorpay payment link grants the selected plan for one billing period
+  in the current MVP.
+
+Fifteenth development slice:
+
+- Added Razorpay Test Mode order checkout for the Angular upgrade page.
+- `POST /api/payments/create-order` creates a Razorpay order and stores a
+  pending subscription without exposing the Key Secret.
+- `POST /api/payments/verify` validates the Razorpay signature against the
+  server-stored order, verifies captured payment status and amount/currency via
+  Razorpay, and activates the plan for one billing period.
+- Live Razorpay keys are rejected by this integration; only `rzp_test_` keys are
+  accepted.
+
+Next development slice: add payment-provider reconciliation reporting, or build
+retention features such as digest jobs and saved research history.
 
 ## Product Metrics
 

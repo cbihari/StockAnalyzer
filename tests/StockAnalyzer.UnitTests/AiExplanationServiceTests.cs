@@ -31,9 +31,46 @@ public sealed class AiExplanationServiceTests
         repository.Setup(value => value.AddAsync(It.IsAny<AiExplanation>(), It.IsAny<CancellationToken>()))
             .Callback<AiExplanation, CancellationToken>((value, _) => persisted = value)
             .Returns(Task.CompletedTask);
+        var monetization = new Mock<IMonetizationService>();
+        monetization
+            .Setup(value => value.CheckAsync(
+                It.IsAny<Guid?>(),
+                It.IsAny<string>(),
+                "ai_explanation",
+                1,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UsageCheckDto(
+                "ai_explanation",
+                "AI explanation",
+                "free",
+                1,
+                0,
+                2,
+                1,
+                true,
+                null,
+                "Allowed."));
+        monetization
+            .Setup(value => value.RecordAsync(
+                It.IsAny<Guid?>(),
+                It.IsAny<string>(),
+                "ai_explanation",
+                1,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UsageCheckDto(
+                "ai_explanation",
+                "AI explanation",
+                "free",
+                1,
+                1,
+                2,
+                1,
+                true,
+                null,
+                "Recorded."));
 
-        var result = await new AiExplanationService(mlClient.Object, repository.Object)
-            .ExplainAsync("aapl", false, CancellationToken.None);
+        var result = await new AiExplanationService(mlClient.Object, repository.Object, monetization.Object)
+            .ExplainAsync("aapl", false, null, Guid.NewGuid().ToString(), CancellationToken.None);
 
         Assert.Equal("openai", result.Provider);
         Assert.Equal("Grounded summary", result.Explanation.Summary);

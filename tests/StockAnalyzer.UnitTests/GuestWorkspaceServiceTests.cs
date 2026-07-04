@@ -1,3 +1,4 @@
+using Moq;
 using StockAnalyzer.Application.Abstractions;
 using StockAnalyzer.Application.DTOs;
 using StockAnalyzer.Application.Services;
@@ -12,7 +13,7 @@ public sealed class GuestWorkspaceServiceTests
     public async Task SaveWatchlist_NormalizesAndLimitsItemDetails()
     {
         var repository = new FakeWorkspaceRepository();
-        var service = new GuestWorkspaceService(repository);
+        var service = CreateService(repository);
         var clientId = Guid.NewGuid().ToString();
         var items = new[]
         {
@@ -30,7 +31,7 @@ public sealed class GuestWorkspaceServiceTests
     [Fact]
     public async Task WorkspaceRejectsInvalidClientId()
     {
-        var service = new GuestWorkspaceService(new FakeWorkspaceRepository());
+        var service = CreateService();
         await Assert.ThrowsAsync<ArgumentException>(() => service.GetWatchlistAsync(null, "not-a-uuid", default));
     }
 
@@ -38,7 +39,7 @@ public sealed class GuestWorkspaceServiceTests
     public async Task SavePortfolio_NormalizesAndValidatesHolding()
     {
         var repository = new FakeWorkspaceRepository();
-        var service = new GuestWorkspaceService(repository);
+        var service = CreateService(repository);
 
         var saved = await service.SavePortfolioAsync(null, Guid.NewGuid().ToString(), [
             new PortfolioHoldingDto("invalid", " aapl ", 1.23456789, 123.45678, "2026-06-01", "  Core holding  ")
@@ -54,10 +55,33 @@ public sealed class GuestWorkspaceServiceTests
     [Fact]
     public async Task SavePortfolio_RejectsNonPositiveQuantity()
     {
-        var service = new GuestWorkspaceService(new FakeWorkspaceRepository());
+        var service = CreateService();
         await Assert.ThrowsAsync<ArgumentException>(() => service.SavePortfolioAsync(null, Guid.NewGuid().ToString(), [
             new PortfolioHoldingDto(Guid.NewGuid().ToString(), "AAPL", 0, 100, null, "")
         ], default));
+    }
+
+    private static GuestWorkspaceService CreateService(FakeWorkspaceRepository? repository = null)
+    {
+        var monetization = new Mock<IMonetizationService>();
+        monetization
+            .Setup(value => value.CheckStoredLimitAsync(
+                It.IsAny<Guid?>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid? _, string _, string featureKey, int requestedTotal, CancellationToken _) =>
+                new StoredLimitCheckDto(
+                    featureKey,
+                    featureKey,
+                    "free",
+                    requestedTotal,
+                    100,
+                    true,
+                    null,
+                    "Allowed."));
+        return new GuestWorkspaceService(repository ?? new FakeWorkspaceRepository(), monetization.Object);
     }
 
     private sealed class FakeWorkspaceRepository : IGuestWorkspaceRepository

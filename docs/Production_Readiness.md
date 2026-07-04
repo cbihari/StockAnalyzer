@@ -37,6 +37,12 @@ Known current strengths:
 | `AFFILIATE_ADMIN_ENABLED` | Optional | Keep false unless admin stats access is intentionally configured. |
 | `AFFILIATE_LINKS_CONFIG` | Optional | JSON partner list overriding appsettings affiliate links. |
 | `MONETIZATION_ADMIN_ENABLED` | Optional | Enables admin-only monetization funnel reporting. |
+| `PAYMENT_PROVIDER` | Optional | Use `manual` for legacy local/testing checkout, `razorpay` only for the Razorpay Payment Links adapter. |
+| `RAZORPAY_KEY_ID` / `Razorpay:KeyId` | Yes when Razorpay checkout is enabled | Razorpay Test Mode API key ID. |
+| `RAZORPAY_KEY_SECRET` / `Razorpay:KeySecret` | Yes when Razorpay checkout is enabled | Backend-only Razorpay API key secret for orders and signature verification. |
+| `RAZORPAY_WEBHOOK_SECRET` | Yes when Razorpay enabled | Razorpay webhook signing secret; keep separate from API credentials. |
+| `RAZORPAY_PRO_AMOUNT_PAISE` | Optional | Defaults to `49900`. |
+| `RAZORPAY_POWER_AMOUNT_PAISE` | Optional | Defaults to `99900`. |
 
 ### FastAPI ML Service
 
@@ -69,6 +75,10 @@ Production Angular config uses same-origin `apiUrl: ''`; Vercel rewrites `/api/*
 - Confirm `FRONTEND_URL` matches the final public frontend URL.
 - Confirm Neon database exists and pooled `DATABASE_URL` is stored as a secret.
 - Confirm Google OAuth redirect URI matches the production callback if Google login is enabled.
+- If paid checkout is enabled, configure Razorpay Test Mode keys for
+  `/api/payments/create-order` and `/api/payments/verify`. Set
+  `PAYMENT_PROVIDER=razorpay` only if the legacy Payment Links adapter is also
+  used, and point Razorpay webhooks to `/api/monetization/webhooks/razorpay`.
 - Deploy ML service before or alongside API so `ML_SERVICE_URL` resolves.
 - Verify health endpoints after deploy:
 
@@ -85,6 +95,8 @@ curl https://stockanalyzer-ml.onrender.com/health
 - Keep `ALLOWED_ORIGINS` restricted to HTTPS production frontend origins.
 - Keep `AFFILIATE_ADMIN_ENABLED=false` unless an admin user/claim process is configured.
 - If affiliate stats are enabled, grant access only to users with `Admin` role or `stockanalyzer_admin=true` claim.
+- If Razorpay is enabled, verify webhook signature checks with the provider
+  dashboard before accepting production payments.
 - Validate Google OAuth client ID/secret are real and callback origins are correct before enabling Google login.
 - Confirm public endpoints remain intentionally public: stock research, auth config/login/signup, affiliate partners, affiliate click tracking.
 - Confirm educational/not-financial-advice copy remains visible in prediction and AI flows.
@@ -127,9 +139,10 @@ curl https://stockanalyzer-ml.onrender.com/health
 ## Known Placeholder Items
 
 - Affiliate partner URLs in `backend/appsettings.json` currently use `https://example.com/...`; replace with approved production partner URLs or supply `AFFILIATE_LINKS_CONFIG`.
-- Frontend upgrade checkout is wired to backend status and checkout endpoints.
-  Production still needs a real provider implementation and webhook signature
-  verification before payments can be collected.
+- Razorpay Test Mode order checkout is wired for the upgrade page, and Razorpay
+  Payment Links remain behind `IPaymentProvider`. Recurring billing, refunds,
+  cancellation self-service, production live-key enablement, and reconciliation
+  reporting are still product gaps before a full paid launch.
 
 ## Pre-Release Verification Commands
 

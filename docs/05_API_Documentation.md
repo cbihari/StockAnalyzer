@@ -49,6 +49,8 @@ Base URL:
 | GET | `/api/monetization/events/funnel/export?days=30` | Admin CSV export for monetization funnel events. |
 | POST | `/api/monetization/checkout` | Create an authenticated paid-plan checkout session. |
 | POST | `/api/monetization/webhooks/{provider}` | Process a payment-provider webhook and update subscription state. |
+| POST | `/api/payments/create-order` | Create an authenticated Razorpay Test Mode order for Checkout. |
+| POST | `/api/payments/verify` | Verify Razorpay payment/order/signature before activating access. |
 | GET | `/api/auth/config` | Auth provider availability. |
 | POST | `/api/auth/signup` | Email/password signup. |
 | POST | `/api/auth/login` | Email/password login. |
@@ -120,6 +122,25 @@ default provider is `manual`, which returns a deterministic redirect URL for
 local integration testing. Paid access begins only after a subscription is
 stored with `status=active`.
 
+`POST /api/payments/create-order` requires `Authorization: Bearer <jwt>` and
+creates a Razorpay Test Mode order for the selected paid plan. The response
+returns the Razorpay Test Mode Key ID, order ID, amount, currency, and Checkout
+display fields for Angular. It never returns the Key Secret. After Checkout
+completes, Angular posts `razorpay_payment_id`, `razorpay_order_id`, and
+`razorpay_signature` to `POST /api/payments/verify`. The backend loads the
+stored order reference, validates the signature with `Razorpay:KeySecret` or
+`RAZORPAY_KEY_SECRET`, fetches the Razorpay payment, and requires captured
+status plus the expected order, amount, and currency before activating the
+pending subscription for one billing period. `Razorpay:KeyId` must start with
+`rzp_test_`; this integration intentionally rejects live keys.
+
+Set `PAYMENT_PROVIDER=razorpay` to use the Razorpay Payment Links adapter. The
+adapter creates a `POST /v1/payment_links` request with the selected plan amount
+in paise, stores the Razorpay payment-link ID as the provider checkout session
+ID, and redirects the user to Razorpay's short payment URL. This MVP treats a
+paid Razorpay payment link as one billing period of access, currently one month
+from webhook processing time.
+
 For local/manual webhook testing, post JSON to
 `/api/monetization/webhooks/manual`:
 
@@ -135,9 +156,11 @@ For local/manual webhook testing, post JSON to
 }
 ```
 
-Real providers must verify webhook signatures inside their `IPaymentProvider`
-implementation before returning the normalized event to the monetization
-service.
+Razorpay webhooks should be sent to `/api/monetization/webhooks/razorpay`. The
+provider verifies `X-Razorpay-Signature` with `RAZORPAY_WEBHOOK_SECRET` before
+returning a normalized event to the monetization service. `payment_link.paid`,
+paid payment-link status, or captured payment status activates the matching
+pending subscription.
 
 `POST /api/predictions/explain-ai/{ticker}` checks the `ai_explanation` quota
 before generating a new explanation. Valid cached explanation responses do not
@@ -164,4 +187,5 @@ notes, or arbitrary user prompts.
 `GET /api/monetization/events/funnel` and
 `GET /api/monetization/events/funnel/export` require the admin policy and
 `MONETIZATION_ADMIN_ENABLED=true` or the existing affiliate admin enable flag.
-They return aggregate event counts only; raw event payloads are not exposed.
+They return aggregate event counts, source/feature/plan breakdowns, and daily
+trend rows only; raw event payloads are not exposed.

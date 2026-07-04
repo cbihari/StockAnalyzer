@@ -482,6 +482,35 @@ export interface CheckoutResponse {
   message: string;
 }
 
+export interface RazorpayOrderResponse {
+  provider: 'razorpay';
+  keyId: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+  planKey: 'pro' | 'power';
+  name: string;
+  description: string;
+  prefillName: string;
+  prefillEmail: string;
+  message: string;
+}
+
+export interface RazorpayPaymentVerificationRequest {
+  razorpayPaymentId: string;
+  razorpayOrderId?: string | null;
+  razorpaySubscriptionId?: string | null;
+  razorpaySignature: string;
+}
+
+export interface RazorpayPaymentVerificationResponse {
+  provider: 'razorpay';
+  planKey: 'pro' | 'power';
+  status: 'pending' | 'active' | 'past_due' | 'canceled';
+  providerSessionId: string;
+  message: string;
+}
+
 export interface MonetizationEventRequest {
   eventName: 'quota_callout_view' | 'quota_callout_click' | 'checkout_start' | 'checkout_created' | 'checkout_failed' | 'paid_feature_attempt';
   source: string;
@@ -508,10 +537,17 @@ export interface MonetizationFunnelBreakdown {
   count: number;
 }
 
+export interface MonetizationFunnelDaily {
+  date: string;
+  eventName: string;
+  count: number;
+}
+
 export interface MonetizationFunnelReport {
   from: string;
   to: string;
   totalEvents: number;
   events: MonetizationFunnelEvent[];
   breakdown: MonetizationFunnelBreakdown[];
+  daily: MonetizationFunnelDaily[];
 }

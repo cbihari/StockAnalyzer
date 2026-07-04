@@ -146,7 +146,9 @@ git diff --check
 - Stock detail analysis causes repeated history/indicator/prediction work and currently records predictions during normal read flows.
 - Workspace sync can race: watchlist/alerts/portfolio use local storage plus immediate API sync without versioning/debounce/conflict handling.
 - Affiliate stats are config-gated but not role-protected if `AFFILIATE_ADMIN_ENABLED=true`.
-- Upgrade/affiliate surfaces still use placeholder partner URLs and a non-functional Pro checkout message.
+- Upgrade/affiliate surfaces still use placeholder partner URLs. Razorpay Test
+  Mode order checkout is wired for paid plans; live-key production checkout is
+  intentionally not enabled.
 - Documentation was corrected for FastAPI route prefixes, but re-check docs after route changes.
 
 ## 12. Safe Areas For Future Refactoring

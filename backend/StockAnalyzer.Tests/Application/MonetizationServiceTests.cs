@@ -393,7 +393,7 @@ public sealed class MonetizationServiceTests
             DateOnly from,
             DateOnly to,
             CancellationToken cancellationToken) =>
-            Task.FromResult(new MonetizationFunnelReportDto(from, to, Events.Count, [], []));
+            Task.FromResult(new MonetizationFunnelReportDto(from, to, Events.Count, [], [], []));
     }
 
     private sealed class FakePaymentProvider : IPaymentProvider

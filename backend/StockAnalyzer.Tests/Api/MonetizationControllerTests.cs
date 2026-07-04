@@ -121,7 +121,8 @@ public sealed class MonetizationControllerTests
             DateOnly.FromDateTime(DateTime.UtcNow),
             2,
             [new MonetizationFunnelEventDto("checkout_start", 2)],
-            [new MonetizationFunnelBreakdownDto("checkout_start", "upgrade", null, "pro", 2)]);
+            [new MonetizationFunnelBreakdownDto("checkout_start", "upgrade", null, "pro", 2)],
+            [new MonetizationFunnelDailyDto(DateOnly.FromDateTime(DateTime.UtcNow), "checkout_start", 2)]);
         var repository = new Mock<IMonetizationEventRepository>();
         repository.Setup(value => value.GetFunnelAsync(
                 It.IsAny<DateOnly>(),
@@ -151,7 +152,8 @@ public sealed class MonetizationControllerTests
             DateOnly.FromDateTime(DateTime.UtcNow),
             3,
             [new MonetizationFunnelEventDto("quota_callout_click", 3)],
-            [new MonetizationFunnelBreakdownDto("quota_callout_click", "stock_detail", "ai_explanation", null, 3)]);
+            [new MonetizationFunnelBreakdownDto("quota_callout_click", "stock_detail", "ai_explanation", null, 3)],
+            [new MonetizationFunnelDailyDto(DateOnly.FromDateTime(DateTime.UtcNow), "quota_callout_click", 3)]);
         var repository = new Mock<IMonetizationEventRepository>();
         repository.Setup(value => value.GetFunnelAsync(
                 It.IsAny<DateOnly>(),
@@ -171,6 +173,7 @@ public sealed class MonetizationControllerTests
         var csv = System.Text.Encoding.UTF8.GetString(file.FileContents);
         Assert.Contains("\"section\",\"event_name\",\"source\"", csv);
         Assert.Contains("\"breakdown\",\"quota_callout_click\",\"stock_detail\",\"ai_explanation\"", csv);
+        Assert.Contains("\"daily\",\"quota_callout_click\"", csv);
     }
 
     [Fact]

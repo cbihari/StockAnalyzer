@@ -198,6 +198,21 @@ public sealed class MonetizationController(
             ]);
         }
 
+        foreach (var item in report.Daily)
+        {
+            AppendCsvRow(builder,
+            [
+                "daily",
+                item.EventName,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                item.Count.ToString(CultureInfo.InvariantCulture),
+                item.Date.ToString("O", CultureInfo.InvariantCulture),
+                item.Date.ToString("O", CultureInfo.InvariantCulture)
+            ]);
+        }
+
         return builder.ToString();
     }
 

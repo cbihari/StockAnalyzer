@@ -1,6 +1,7 @@
 .DS_Store
 .env
 .secrets/
+rzp-key.csv
 **/bin/
 **/obj/
 **/node_modules/

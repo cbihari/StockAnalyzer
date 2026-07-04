@@ -32,7 +32,30 @@ public static class DependencyInjection
         services.AddScoped<IUsageRepository, UsageRepository>();
         services.AddScoped<IMonetizationEventRepository, MonetizationEventRepository>();
         services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
-        services.AddSingleton<IPaymentProvider, ManualPaymentProvider>();
+        services.AddSingleton(_ => RazorpaySettings.FromConfiguration(configuration));
+        services.AddHttpClient<RazorpayPaymentProvider>((serviceProvider, client) =>
+        {
+            var razorpaySettings = serviceProvider.GetRequiredService<RazorpaySettings>();
+            client.BaseAddress = new Uri(razorpaySettings.BaseUrl);
+        });
+        services.AddHttpClient<IRazorpayCheckoutService, RazorpayCheckoutService>((serviceProvider, client) =>
+        {
+            var razorpaySettings = serviceProvider.GetRequiredService<RazorpaySettings>();
+            client.BaseAddress = new Uri(razorpaySettings.BaseUrl);
+        });
+        services.AddSingleton<ManualPaymentProvider>();
+        services.AddScoped<IPaymentProvider>(serviceProvider =>
+        {
+            var provider = (Environment.GetEnvironmentVariable("PAYMENT_PROVIDER")
+                ?? configuration["Payments:Provider"]
+                ?? "manual").Trim().ToLowerInvariant();
+            return provider switch
+            {
+                "manual" => serviceProvider.GetRequiredService<ManualPaymentProvider>(),
+                "razorpay" => serviceProvider.GetRequiredService<RazorpayPaymentProvider>(),
+                _ => throw new InvalidOperationException("Configured payment provider is not supported.")
+            };
+        });
         services.AddSingleton<IMarketDataProviderInfo, MarketDataProviderInfo>();
         services.AddHttpClient<IMlServiceClient, MlServiceClient>(client =>
         {

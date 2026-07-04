@@ -24,6 +24,7 @@ public sealed class ExceptionHandlingMiddleware(
         var (statusCode, title, detail) = exception switch
         {
             ArgumentException => (400, "Invalid request", exception.Message),
+            UnauthorizedAccessException => (403, "Forbidden", exception.Message),
             PlanLimitExceededException => (402, "Plan limit reached", exception.Message),
             ExternalServiceException external =>
                 (external.StatusCode, "ML service request failed", external.Message),

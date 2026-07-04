@@ -77,12 +77,18 @@ public sealed record MonetizationFunnelBreakdownDto(
     string? PlanKey,
     int Count);
 
+public sealed record MonetizationFunnelDailyDto(
+    DateOnly Date,
+    string EventName,
+    int Count);
+
 public sealed record MonetizationFunnelReportDto(
     DateOnly From,
     DateOnly To,
     int TotalEvents,
     IReadOnlyList<MonetizationFunnelEventDto> Events,
-    IReadOnlyList<MonetizationFunnelBreakdownDto> Breakdown);
+    IReadOnlyList<MonetizationFunnelBreakdownDto> Breakdown,
+    IReadOnlyList<MonetizationFunnelDailyDto> Daily);
 
 public sealed record SubscriptionStateDto(
     string Plan,
@@ -124,6 +130,35 @@ public sealed record PaymentWebhookEventDto(
 public sealed record PaymentWebhookResultDto(
     string Provider,
     string EventType,
+    string PlanKey,
+    string Status,
+    string ProviderSessionId,
+    string Message);
+
+public sealed record RazorpayOrderRequestDto(
+    string PlanKey);
+
+public sealed record RazorpayOrderResponseDto(
+    string Provider,
+    string KeyId,
+    string OrderId,
+    int Amount,
+    string Currency,
+    string PlanKey,
+    string Name,
+    string Description,
+    string PrefillName,
+    string PrefillEmail,
+    string Message);
+
+public sealed record RazorpayPaymentVerificationRequestDto(
+    string RazorpayPaymentId,
+    string? RazorpayOrderId,
+    string? RazorpaySubscriptionId,
+    string RazorpaySignature);
+
+public sealed record RazorpayPaymentVerificationResponseDto(
+    string Provider,
     string PlanKey,
     string Status,
     string ProviderSessionId,

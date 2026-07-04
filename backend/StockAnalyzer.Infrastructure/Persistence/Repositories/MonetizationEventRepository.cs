@@ -42,12 +42,22 @@ public sealed class MonetizationEventRepository(StockAnalyzerDbContext dbContext
             .ThenBy(value => value.EventName)
             .ThenBy(value => value.Source)
             .ToListAsync(cancellationToken);
+        var dailyRows = await query
+            .GroupBy(value => new { Date = value.OccurredAt.Date, value.EventName })
+            .Select(group => new { group.Key.Date, group.Key.EventName, Count = group.Count() })
+            .OrderBy(value => value.Date)
+            .ThenBy(value => value.EventName)
+            .ToListAsync(cancellationToken);
 
         return new MonetizationFunnelReportDto(
             from,
             to,
             events.Sum(value => value.Count),
             events,
-            breakdown);
+            breakdown,
+            dailyRows.Select(row => new MonetizationFunnelDailyDto(
+                DateOnly.FromDateTime(row.Date),
+                row.EventName,
+                row.Count)).ToList());
     }
 }
