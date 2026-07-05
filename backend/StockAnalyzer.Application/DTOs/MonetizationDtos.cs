@@ -144,6 +144,7 @@ public sealed record RazorpayOrderResponseDto(
     string OrderId,
     int Amount,
     string Currency,
+    string CheckoutMode,
     string PlanKey,
     string Name,
     string Description,

@@ -107,7 +107,7 @@ public sealed class RazorpayPaymentProvider(
             string.IsNullOrWhiteSpace(parsed.Event) ? $"razorpay.{status}" : parsed.Event.Trim(),
             status,
             string.IsNullOrWhiteSpace(planKey) ? null : SubscriptionPlan.Normalize(planKey),
-            FirstNonEmpty(paymentLink?.Id, paymentLink?.ReferenceId),
+            FirstNonEmpty(paymentLink?.Id, paymentLink?.ReferenceId, payment?.OrderId),
             payment?.Id,
             FirstNonEmpty(paymentLink?.CustomerId, payment?.CustomerId),
             DateTimeOffset.UtcNow,
@@ -220,6 +220,8 @@ public sealed class RazorpayPaymentProvider(
 
     private sealed record RazorpayPaymentEntity(
         string? Id,
+        [property: JsonPropertyName("order_id")]
+        string? OrderId,
         string? Status,
         [property: JsonPropertyName("customer_id")]
         string? CustomerId,

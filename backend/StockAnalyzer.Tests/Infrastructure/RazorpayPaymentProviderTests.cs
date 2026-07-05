@@ -110,6 +110,44 @@ public sealed class RazorpayPaymentProviderTests
                 CancellationToken.None));
     }
 
+    [Fact]
+    public async Task ParseWebhookAsync_PaymentCapturedUsesOrderIdForDirectCheckout()
+    {
+        var provider = CreateProvider(new StubHandler(_ => Task.FromResult(Json("{}"))));
+        var payload = """
+            {
+              "event": "payment.captured",
+              "payload": {
+                "payment": {
+                  "entity": {
+                    "id": "pay_123",
+                    "order_id": "order_123",
+                    "status": "captured",
+                    "notes": {
+                      "plan_key": "pro"
+                    }
+                  }
+                }
+              }
+            }
+            """;
+
+        var result = await provider.ParseWebhookAsync(
+            payload,
+            new Dictionary<string, string>
+            {
+                ["x-razorpay-signature"] = Signature(payload)
+            },
+            CancellationToken.None);
+
+        Assert.Equal("payment.captured", result.EventType);
+        Assert.Equal(SubscriptionStatus.Active, result.Status);
+        Assert.Equal(SubscriptionPlan.Pro, result.PlanKey);
+        Assert.Equal("order_123", result.ProviderCheckoutSessionId);
+        Assert.Equal("pay_123", result.ProviderSubscriptionId);
+        Assert.NotNull(result.CurrentPeriodEnd);
+    }
+
     private static RazorpayPaymentProvider CreateProvider(HttpMessageHandler handler)
     {
         var httpClient = new HttpClient(handler)

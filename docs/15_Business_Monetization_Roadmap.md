@@ -177,9 +177,9 @@ Build in this order:
 2. Usage-metering service. Status: backend foundation added.
 3. Payment provider abstraction. Status: manual and Razorpay providers added.
 4. Checkout and webhook handling. Status: manual checkout, Razorpay Payment
-   Links/webhooks, and Razorpay Test Mode order verification added.
+   Links/webhooks, and Razorpay order verification added.
 5. Pricing/upgrade frontend. Status: upgrade page connected to backend status
-   and Razorpay Test Mode Checkout.
+   and Razorpay Checkout.
 6. Limit-aware UI states. Status: upgrade page displays current usage and plan limits.
 7. Analytics events.
 8. Affiliate disclosure improvements.
@@ -231,10 +231,10 @@ Fourth development slice:
 - The Angular upgrade page calls `/api/monetization/status`.
 - The page displays current plan, subscription state, and today's quota usage.
 - Free/Pro/Power pricing cards are rendered from backend plan metadata.
-- Signed-in users start Razorpay Test Mode Checkout through
+- Signed-in users start Razorpay Checkout through
   `/api/payments/create-order`.
 - Anonymous users are routed to login before checkout.
-- Angular receives only the Razorpay Test Mode Key ID and verifies completed
+- Angular receives only the Razorpay Key ID and verifies completed
   payments through `/api/payments/verify`.
 
 Fifth development slice:
@@ -318,14 +318,14 @@ Fourteenth development slice:
 
 Fifteenth development slice:
 
-- Added Razorpay Test Mode order checkout for the Angular upgrade page.
+- Added Razorpay order checkout for the Angular upgrade page.
 - `POST /api/payments/create-order` creates a Razorpay order and stores a
   pending subscription without exposing the Key Secret.
 - `POST /api/payments/verify` validates the Razorpay signature against the
   server-stored order, verifies captured payment status and amount/currency via
   Razorpay, and activates the plan for one billing period.
-- Live Razorpay keys are rejected by this integration; only `rzp_test_` keys are
-  accepted.
+- Razorpay keys are mode-validated: `RAZORPAY_MODE=test` requires `rzp_test_*`
+  keys, and `RAZORPAY_MODE=live` requires `rzp_live_*` keys.
 
 Next development slice: add payment-provider reconciliation reporting, or build
 retention features such as digest jobs and saved research history.

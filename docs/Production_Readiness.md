@@ -38,7 +38,8 @@ Known current strengths:
 | `AFFILIATE_LINKS_CONFIG` | Optional | JSON partner list overriding appsettings affiliate links. |
 | `MONETIZATION_ADMIN_ENABLED` | Optional | Enables admin-only monetization funnel reporting. |
 | `PAYMENT_PROVIDER` | Optional | Use `manual` for legacy local/testing checkout, `razorpay` only for the Razorpay Payment Links adapter. |
-| `RAZORPAY_KEY_ID` / `Razorpay:KeyId` | Yes when Razorpay checkout is enabled | Razorpay Test Mode API key ID. |
+| `RAZORPAY_MODE` / `Razorpay:Mode` | Yes when Razorpay checkout is enabled | Use `test` by default; set `live` only on production with `rzp_live_*` credentials. |
+| `RAZORPAY_KEY_ID` / `Razorpay:KeyId` | Yes when Razorpay checkout is enabled | Razorpay API key ID for the configured mode; safe for Checkout responses. |
 | `RAZORPAY_KEY_SECRET` / `Razorpay:KeySecret` | Yes when Razorpay checkout is enabled | Backend-only Razorpay API key secret for orders and signature verification. |
 | `RAZORPAY_WEBHOOK_SECRET` | Yes when Razorpay enabled | Razorpay webhook signing secret; keep separate from API credentials. |
 | `RAZORPAY_PRO_AMOUNT_PAISE` | Optional | Defaults to `49900`. |
@@ -75,8 +76,9 @@ Production Angular config uses same-origin `apiUrl: ''`; Vercel rewrites `/api/*
 - Confirm `FRONTEND_URL` matches the final public frontend URL.
 - Confirm Neon database exists and pooled `DATABASE_URL` is stored as a secret.
 - Confirm Google OAuth redirect URI matches the production callback if Google login is enabled.
-- If paid checkout is enabled, configure Razorpay Test Mode keys for
-  `/api/payments/create-order` and `/api/payments/verify`. Set
+- If paid checkout is enabled, configure Razorpay keys for the intended mode:
+  `RAZORPAY_MODE=test` with `rzp_test_*` keys for staging, or
+  `RAZORPAY_MODE=live` with `rzp_live_*` keys for the production URL. Set
   `PAYMENT_PROVIDER=razorpay` only if the legacy Payment Links adapter is also
   used, and point Razorpay webhooks to `/api/monetization/webhooks/razorpay`.
 - Deploy ML service before or alongside API so `ML_SERVICE_URL` resolves.
@@ -139,10 +141,10 @@ curl https://stockanalyzer-ml.onrender.com/health
 ## Known Placeholder Items
 
 - Affiliate partner URLs in `backend/appsettings.json` currently use `https://example.com/...`; replace with approved production partner URLs or supply `AFFILIATE_LINKS_CONFIG`.
-- Razorpay Test Mode order checkout is wired for the upgrade page, and Razorpay
-  Payment Links remain behind `IPaymentProvider`. Recurring billing, refunds,
-  cancellation self-service, production live-key enablement, and reconciliation
-  reporting are still product gaps before a full paid launch.
+- Razorpay order checkout is wired for the upgrade page with explicit
+  test/live mode validation, and Razorpay Payment Links remain behind
+  `IPaymentProvider`. Recurring billing, refunds, cancellation self-service,
+  and reconciliation reporting are still product gaps before a full paid launch.
 
 ## Pre-Release Verification Commands
 

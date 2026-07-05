@@ -488,6 +488,7 @@ export interface RazorpayOrderResponse {
   orderId: string;
   amount: number;
   currency: string;
+  checkoutMode: 'test' | 'live';
   planKey: 'pro' | 'power';
   name: string;
   description: string;

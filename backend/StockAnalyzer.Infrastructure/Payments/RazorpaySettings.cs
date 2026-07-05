@@ -4,6 +4,10 @@ namespace StockAnalyzer.Infrastructure.Payments;
 
 public sealed class RazorpaySettings
 {
+    public const string TestMode = "test";
+    public const string LiveMode = "live";
+
+    public string Mode { get; init; } = TestMode;
     public string KeyId { get; init; } = string.Empty;
     public string KeySecret { get; init; } = string.Empty;
     public string WebhookSecret { get; init; } = string.Empty;
@@ -18,6 +22,11 @@ public sealed class RazorpaySettings
         var direct = configuration.GetSection("Razorpay");
         return new RazorpaySettings
         {
+            Mode = FirstNonEmpty(
+                Environment.GetEnvironmentVariable("RAZORPAY_MODE"),
+                direct["Mode"],
+                legacy["Mode"],
+                TestMode)!,
             KeyId = FirstNonEmpty(
                 Environment.GetEnvironmentVariable("RAZORPAY_KEY_ID"),
                 direct["KeyId"],
@@ -52,6 +61,8 @@ public sealed class RazorpaySettings
         };
     }
 
+    public string NormalizedMode => NormalizeMode(Mode);
+
     public void EnsureApiCredentials()
     {
         if (string.IsNullOrWhiteSpace(KeyId) || string.IsNullOrWhiteSpace(KeySecret))
@@ -59,9 +70,15 @@ public sealed class RazorpaySettings
             throw new InvalidOperationException("Razorpay key ID and key secret are required.");
         }
 
-        if (!KeyId.StartsWith("rzp_test_", StringComparison.Ordinal))
+        var mode = NormalizedMode;
+        if (mode == TestMode && !KeyId.StartsWith("rzp_test_", StringComparison.Ordinal))
         {
-            throw new InvalidOperationException("Only Razorpay Test Mode keys are supported by this integration.");
+            throw new InvalidOperationException("Razorpay test mode requires a key ID that starts with rzp_test_. Set RAZORPAY_MODE=live only when using live production keys.");
+        }
+
+        if (mode == LiveMode && !KeyId.StartsWith("rzp_live_", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Razorpay live mode requires a key ID that starts with rzp_live_. Use RAZORPAY_MODE=test for test keys.");
         }
     }
 
@@ -88,4 +105,17 @@ public sealed class RazorpaySettings
 
     private static string? FirstNonEmpty(params string?[] values) =>
         values.Select(value => value?.Trim()).FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+
+    private static string NormalizeMode(string? mode)
+    {
+        var normalized = string.IsNullOrWhiteSpace(mode)
+            ? TestMode
+            : mode.Trim().ToLowerInvariant();
+        if (normalized is not TestMode and not LiveMode)
+        {
+            throw new InvalidOperationException("Razorpay mode must be either test or live.");
+        }
+
+        return normalized;
+    }
 }

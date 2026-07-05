@@ -156,7 +156,7 @@ const fallbackPlans: SubscriptionPlan[] = [
 
       @if (message()) { <p class="upgrade-note" role="status">{{ message() }}</p> }
       @if (usingFallbackStatus()) { <p class="upgrade-note warning" role="status">Live plan sync is temporarily unavailable. Showing standard plan details; checkout will reopen after the backend update finishes.</p> }
-      <p class="upgrade-note">Razorpay Test Mode is used for local checkout. The browser receives only the Test Mode Key ID; payment verification runs on the backend.</p>
+      <p class="upgrade-note">Razorpay Checkout sends only the Key ID to the browser; payment verification runs on the backend.</p>
     </main>
   `,
   styles: [`
@@ -331,6 +331,7 @@ export class UpgradeComponent implements OnInit {
           },
         });
         checkout.open();
+        this.message.set(`Razorpay ${order.checkoutMode === 'live' ? 'Live' : 'Test'} checkout opened.`);
       })
       .catch(() => {
         this.checkoutLoading.set('');

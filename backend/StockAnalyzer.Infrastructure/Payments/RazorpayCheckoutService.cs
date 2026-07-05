@@ -26,6 +26,7 @@ public sealed class RazorpayCheckoutService(
         CancellationToken cancellationToken)
     {
         settings.EnsureApiCredentials();
+        var checkoutMode = settings.NormalizedMode;
         var planKey = SubscriptionPlan.Normalize(request.PlanKey);
         var amount = PlanAmountPaise(planKey);
         var receipt = $"sa_{DateTimeOffset.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid():N}"[..40];
@@ -40,7 +41,7 @@ public sealed class RazorpayCheckoutService(
                 {
                     ["user_id"] = userId.ToString(),
                     ["plan_key"] = planKey,
-                    ["mode"] = "test"
+                    ["mode"] = checkoutMode
                 }
             }, options: JsonOptions)
         };
@@ -77,12 +78,13 @@ public sealed class RazorpayCheckoutService(
             order.Id,
             order.Amount,
             order.Currency,
+            checkoutMode,
             planKey,
             "StockAnalyzer",
             $"StockAnalyzer {PlanName(planKey)} plan",
             string.IsNullOrWhiteSpace(userName) ? "StockAnalyzer user" : userName,
             userEmail,
-            "Razorpay test order created.");
+            $"Razorpay {checkoutMode} order created.");
     }
 
     public async Task<RazorpayPaymentVerificationResponseDto> VerifyPaymentAsync(

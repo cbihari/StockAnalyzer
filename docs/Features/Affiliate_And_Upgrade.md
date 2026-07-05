@@ -17,7 +17,7 @@ for the broader packaging and phased rollout plan.
 3. User click is recorded with broker, optional ticker, and anonymous client ID.
 4. Quota callout views/clicks, checkout starts, and paid-feature attempts are
    recorded as bounded first-party monetization events.
-5. Upgrade checkout uses Razorpay Test Mode order checkout through
+5. Upgrade checkout uses Razorpay order checkout through
    `POST /api/payments/create-order` and `POST /api/payments/verify`. The older
    `IPaymentProvider` path remains available for manual local checkout and
    Razorpay Payment Links/webhooks.

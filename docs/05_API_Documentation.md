@@ -49,7 +49,7 @@ Base URL:
 | GET | `/api/monetization/events/funnel/export?days=30` | Admin CSV export for monetization funnel events. |
 | POST | `/api/monetization/checkout` | Create an authenticated paid-plan checkout session. |
 | POST | `/api/monetization/webhooks/{provider}` | Process a payment-provider webhook and update subscription state. |
-| POST | `/api/payments/create-order` | Create an authenticated Razorpay Test Mode order for Checkout. |
+| POST | `/api/payments/create-order` | Create an authenticated Razorpay order for Checkout using the configured mode. |
 | POST | `/api/payments/verify` | Verify Razorpay payment/order/signature before activating access. |
 | GET | `/api/auth/config` | Auth provider availability. |
 | POST | `/api/auth/signup` | Email/password signup. |
@@ -123,16 +123,18 @@ local integration testing. Paid access begins only after a subscription is
 stored with `status=active`.
 
 `POST /api/payments/create-order` requires `Authorization: Bearer <jwt>` and
-creates a Razorpay Test Mode order for the selected paid plan. The response
-returns the Razorpay Test Mode Key ID, order ID, amount, currency, and Checkout
-display fields for Angular. It never returns the Key Secret. After Checkout
-completes, Angular posts `razorpay_payment_id`, `razorpay_order_id`, and
-`razorpay_signature` to `POST /api/payments/verify`. The backend loads the
-stored order reference, validates the signature with `Razorpay:KeySecret` or
-`RAZORPAY_KEY_SECRET`, fetches the Razorpay payment, and requires captured
-status plus the expected order, amount, and currency before activating the
-pending subscription for one billing period. `Razorpay:KeyId` must start with
-`rzp_test_`; this integration intentionally rejects live keys.
+creates a Razorpay order for the selected paid plan using `RAZORPAY_MODE`
+(`test` by default, `live` only when explicitly configured). The response
+returns the Razorpay Key ID, order ID, amount, currency, `checkoutMode`, and
+Checkout display fields for Angular. It never returns the Key Secret. After
+Checkout completes, Angular posts `razorpay_payment_id`,
+`razorpay_order_id`, and `razorpay_signature` to `POST /api/payments/verify`.
+The backend loads the stored order reference, validates the signature with
+`Razorpay:KeySecret` or `RAZORPAY_KEY_SECRET`, fetches the Razorpay payment,
+and requires captured status plus the expected order, amount, and currency
+before activating the pending subscription for one billing period. In test
+mode, `Razorpay:KeyId` must start with `rzp_test_`; in live mode, it must start
+with `rzp_live_`.
 
 Set `PAYMENT_PROVIDER=razorpay` to use the Razorpay Payment Links adapter. The
 adapter creates a `POST /v1/payment_links` request with the selected plan amount

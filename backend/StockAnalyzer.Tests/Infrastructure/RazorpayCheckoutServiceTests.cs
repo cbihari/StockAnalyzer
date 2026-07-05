@@ -39,6 +39,7 @@ public sealed class RazorpayCheckoutServiceTests
         Assert.Equal("rzp_test_key", result.KeyId);
         Assert.DoesNotContain("secret", result.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal("order_123", result.OrderId);
+        Assert.Equal(RazorpaySettings.TestMode, result.CheckoutMode);
         Assert.Equal(49900, result.Amount);
         Assert.Equal(SubscriptionStatus.Pending, repository.Current?.Status);
         Assert.Equal("order_123", repository.Current?.ProviderCheckoutSessionId);
@@ -138,16 +139,44 @@ public sealed class RazorpayCheckoutServiceTests
     }
 
     [Fact]
-    public void RazorpaySettings_RejectsLiveModeKey()
+    public void RazorpaySettings_RejectsLiveKeyWhenModeIsTest()
     {
         var settings = new RazorpaySettings
         {
             KeyId = "rzp_live_key",
-            KeySecret = "secret"
+            KeySecret = "secret",
+            Mode = RazorpaySettings.TestMode
         };
 
         var exception = Assert.Throws<InvalidOperationException>(settings.EnsureApiCredentials);
-        Assert.Contains("Test Mode", exception.Message);
+        Assert.Contains("RAZORPAY_MODE=live", exception.Message);
+    }
+
+    [Fact]
+    public void RazorpaySettings_AcceptsLiveKeyWhenModeIsLive()
+    {
+        var settings = new RazorpaySettings
+        {
+            KeyId = "rzp_live_key",
+            KeySecret = "secret",
+            Mode = RazorpaySettings.LiveMode
+        };
+
+        settings.EnsureApiCredentials();
+    }
+
+    [Fact]
+    public void RazorpaySettings_RejectsTestKeyWhenModeIsLive()
+    {
+        var settings = new RazorpaySettings
+        {
+            KeyId = "rzp_test_key",
+            KeySecret = "secret",
+            Mode = RazorpaySettings.LiveMode
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(settings.EnsureApiCredentials);
+        Assert.Contains("rzp_live_", exception.Message);
     }
 
     private static RazorpayCheckoutService CreateService(

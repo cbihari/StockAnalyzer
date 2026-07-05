@@ -11,7 +11,7 @@ namespace StockAnalyzer.Api.Controllers;
 [Route("api/payments")]
 public sealed class PaymentsController(IRazorpayCheckoutService razorpayCheckoutService) : ControllerBase
 {
-    /// <summary>Creates a Razorpay Test Mode order for the signed-in user.</summary>
+    /// <summary>Creates a Razorpay order for the signed-in user using the configured Razorpay mode.</summary>
     [HttpPost("create-order")]
     [ProducesResponseType<RazorpayOrderResponseDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
