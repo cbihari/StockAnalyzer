@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using StockAnalyzer.Api.Auth;
 using StockAnalyzer.Application.Abstractions;
 using StockAnalyzer.Application.DTOs;
@@ -29,7 +30,7 @@ public sealed class PaymentsController(IRazorpayCheckoutService razorpayCheckout
         return Ok(await razorpayCheckoutService.CreateOrderAsync(
             userId.Value,
             User.Identity?.Name ?? string.Empty,
-            User.FindFirst("email")?.Value ?? string.Empty,
+            User.FindFirstValue(ClaimTypes.Email) ?? string.Empty,
             request,
             cancellationToken));
     }
